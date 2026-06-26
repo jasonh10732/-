@@ -70,6 +70,9 @@
     <span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span><span class="spark s4"></span>
   </div>
 
+  <!-- 走火入魔：邊緣紅光黑霧覆蓋層（body.deviated 時顯示） -->
+  <div class="deviation-veil" aria-hidden="true"></div>
+
   <div id="app">
 
     <!-- ====== 頂部狀態列：境界 + 修為 + 連續修煉（各頁共用） ====== -->
@@ -110,11 +113,27 @@
           <div class="mood-row" id="moodRow"></div>
         </div>
 
+        <!-- 今日心魔：血量＝當日功課數，完成功課即扣血、全清斬殺 -->
+        <div class="card demon-card" id="heartDemon"></div>
+
         <div class="card">
           <h2>今日功課</h2>
-          <p class="sub">完成一項即增修為，往「我的」可新增功課</p>
+          <p class="sub">完成一項即增修為、斬心魔，往「我的」可新增功課</p>
           <ul class="checklist" id="todayList">
             <li class="empty-hint">尚未立下功課，往「我的」分頁新增 ✧</li>
+          </ul>
+        </div>
+
+        <!-- 本週備忘 / 週計畫：純安排，週週封存可回顧 -->
+        <div class="card">
+          <h2>本週備忘</h2>
+          <p class="sub" id="weekRange">這禮拜打算完成的大事（過去各週可在「紀錄」回顧）</p>
+          <div class="add-goal">
+            <input type="text" id="weekInput" placeholder="本週要做的一件大事…" />
+            <button id="weekAddBtn" class="primary-btn">＋</button>
+          </div>
+          <ul class="checklist" id="weekList">
+            <li class="empty-hint">本週還沒立下備忘 ✧</li>
           </ul>
         </div>
 
@@ -135,8 +154,16 @@
         </div>
         <div class="card">
           <h2>過往足跡</h2>
+          <p class="sub">每一天做了什麼都留著，過了不會消失</p>
           <div class="timeline" id="timeline">
             <p class="empty-hint">還沒有紀錄，從今日開始吧 ✧</p>
+          </div>
+        </div>
+        <div class="card">
+          <h2>每週回顧</h2>
+          <p class="sub">每週的備忘與當週完成的功課小結</p>
+          <div class="weekreview" id="weekReview">
+            <p class="empty-hint">本週開始累積後，這裡會逐週封存 ✧</p>
           </div>
         </div>
       </section>
@@ -237,8 +264,8 @@
     </nav>
   </div>
 
-  <!-- 背景音樂（原創古風五聲音階，自製免版權）。preload=none：開啟才下載 -->
-  <audio id="bgm" loop preload="none"><source src="music.wav" type="audio/wav" /></audio>
+  <!-- 背景音樂（使用者上傳）。preload=none：開啟才下載 -->
+  <audio id="bgm" loop preload="none"><source src="music.m4a" type="audio/mp4" /></audio>
 
   <script src="coach.js"></script>
   <script src="app.js"></script>

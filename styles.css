@@ -302,3 +302,68 @@ body::before{
   text-shadow:0 0 6px var(--glow); animation:xppop .9s ease-out forwards; }
 @keyframes xppop{ 0%{ opacity:0; transform:translate(-50%,-50%);} 20%{ opacity:1;}
   100%{ opacity:0; transform:translate(-50%,-170%);} }
+
+/* ============ 背景圖（亮/深各一，使用者上傳） ============ */
+[data-theme="light"] body{ background-image:url("bg-light.jpg"); background-size:cover; background-position:center; background-attachment:fixed; }
+[data-theme="dark"] body{ background-image:url("bg-dark.jpg"); background-size:cover; background-position:center; background-attachment:fixed; }
+/* 背景圖已含山水，關掉程式生成的遠山雲霧、保留光點 */
+.scenery .mountains, .scenery .mist{ display:none; }
+
+/* ============ 今日心魔 ============ */
+.demon-card{ display:flex; gap:14px; align-items:center; }
+.demon-stage{ position:relative; width:72px; height:72px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.demon{ width:72px; height:72px; animation:demonFloat 3.6s ease-in-out infinite; transform-origin:center; }
+@keyframes demonFloat{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-3px) scale(1.05);} }
+.demon .smoke{ filter:blur(1.3px); }
+.demon .smoke circle{ fill:#2a2730; opacity:.9; }
+[data-theme="dark"] .demon .smoke circle{ fill:#08080c; }
+.demon .eye{ fill:#e0483f; filter:drop-shadow(0 0 3px rgba(224,72,63,.9)); animation:eyeGlow 2s ease-in-out infinite; }
+@keyframes eyeGlow{ 0%,100%{ opacity:.65;} 50%{ opacity:1;} }
+.demon .mouth{ stroke:#e0483f; stroke-width:1.6; opacity:.55; }
+.demon-info{ flex:1; min-width:0; }
+.demon-name{ font-family:var(--serif); font-weight:700; font-size:15px; color:var(--ink); }
+.demon-hpbar{ height:9px; background:var(--field); border:1px solid var(--line); border-radius:99px; overflow:hidden; margin:7px 0 5px; }
+.demon-hp{ height:100%; background:linear-gradient(90deg,#7a1f1b,#d6463d); box-shadow:0 0 8px rgba(214,70,61,.5); border-radius:99px; transition:width .45s ease; }
+.demon-hint{ font-size:12px; color:var(--muted); }
+.demon-card.dormant{ opacity:.72; }
+.demon-card.dormant .demon{ filter:grayscale(.6); animation:none; }
+.demon-card.slain .demon{ opacity:.22; filter:grayscale(1); animation:none; }
+.slain-mark{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:700; font-size:12px; color:var(--seal); text-shadow:0 0 6px var(--glow); }
+/* 斬心魔劍光 */
+.sword-flash{ position:absolute; inset:0; pointer-events:none; overflow:hidden; border-radius:16px; z-index:2; }
+.sword-flash::before{ content:""; position:absolute; top:-20%; left:-40%; width:55%; height:140%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent); transform:rotate(18deg);
+  animation:slash .36s ease-out forwards; }
+@keyframes slash{ from{ left:-40%; opacity:0;} 30%{ opacity:1;} to{ left:120%; opacity:0;} }
+
+/* ============ 走火入魔 ============ */
+.deviation-veil{ position:fixed; inset:0; z-index:25; pointer-events:none; opacity:0; transition:opacity .6s; }
+body.deviated .deviation-veil{ opacity:1; animation:veilPulse 4s ease-in-out infinite; }
+/* 只在邊緣泛淡紅黑霧，中間維持清楚可讀 */
+@keyframes veilPulse{
+  0%,100%{ box-shadow:inset 0 0 70px 0 rgba(150,24,18,.26), inset 0 0 26px 0 rgba(0,0,0,.20); }
+  50%{ box-shadow:inset 0 0 95px 2px rgba(165,26,18,.36), inset 0 0 34px 0 rgba(0,0,0,.26); } }
+.dev-banner{ background:linear-gradient(135deg, rgba(140,20,15,.16), rgba(0,0,0,.05));
+  border:1px solid rgba(150,30,24,.45); color:var(--ink); border-radius:14px; padding:12px 14px;
+  margin-bottom:15px; font-size:13.5px; box-shadow:0 0 14px rgba(150,30,20,.25); }
+.dev-banner b{ color:var(--seal); }
+
+/* ============ 時間軸：當天完成的功課 ============ */
+.tl-tasks{ display:flex; flex-wrap:wrap; gap:5px; margin:5px 0 2px; }
+.tl-task{ font-size:11.5px; color:var(--ink); background:var(--seal-soft);
+  border:1px solid var(--gold-soft); border-radius:99px; padding:1px 9px; }
+
+/* ============ 每週回顧 ============ */
+.wr-week{ border:1px solid var(--gold-soft); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--field); }
+.wr-week.current{ border-color:var(--gold); box-shadow:0 0 8px var(--glow); }
+.wr-head{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.wr-range{ font-family:var(--serif); font-weight:700; font-size:14px; color:var(--ink); }
+.wr-now{ font-size:11px; color:var(--seal); border:1px solid var(--gold-soft); border-radius:99px; padding:1px 8px; }
+.wr-label{ font-size:11px; color:var(--muted); margin:6px 0 2px; }
+.wr-items{ list-style:none; }
+.wr-items li{ font-size:13.5px; color:var(--ink); padding:2px 0; }
+.wr-items li.done{ color:var(--muted); text-decoration:line-through; }
+.wr-empty{ font-size:13px; color:var(--muted); }
+.wr-summary{ font-size:12.5px; color:var(--ink-soft); margin-top:8px; border-top:1px dashed var(--line); padding-top:7px; }
+.wr-tally{ color:var(--muted); margin-top:3px; }

@@ -33,7 +33,7 @@ const BADGES = [
 
 // ---------------- 資料 ----------------
 function emptyState() {
-  return { goals: [], checkins: {}, lastLevel: 1, coachName: "" };
+  return { goals: [], checkins: {}, lastLevel: 1, coachName: "", weeks: {} };
 }
 function loadState() {
   try {
@@ -57,6 +57,39 @@ function todayCheckin() {
 }
 function isActive(c) {
   return c && (((c.done && c.done.length) || c.mood || (c.note && c.note.trim())));
+}
+
+// 週界：回傳該週「週一」的日期鍵（週一為一週之始）
+function mondayOf(d) {
+  const x = new Date(d);
+  const back = (x.getDay() + 6) % 7;   // 週日=0 → 6；週一=1 → 0
+  x.setDate(x.getDate() - back); x.setHours(0, 0, 0, 0);
+  return x;
+}
+function weekKey(d) { return dateKey(mondayOf(d)); }
+function currentWeekKey() { return weekKey(new Date()); }
+function currentWeekItems() {
+  const k = currentWeekKey();
+  if (!state.weeks) state.weeks = {};
+  if (!state.weeks[k]) state.weeks[k] = [];
+  return state.weeks[k];
+}
+// 取某功課在某天的標題：優先用當天快照（即使功課日後被刪也還在）
+function titleOf(checkin, id) {
+  if (checkin && checkin.titles && checkin.titles[id]) return checkin.titles[id];
+  const g = state.goals.find(x => x.id === id);
+  return g ? g.title : "（已刪除的功課）";
+}
+function dateKeyOffset(off) { const d = new Date(); d.setDate(d.getDate() - off); return dateKey(d); }
+function hasPastActivity() {
+  const tk = todayKey();
+  for (const k in state.checkins) if (k < tk && isActive(state.checkins[k])) return true;
+  return false;
+}
+// 走火入魔：有過往打卡 && 昨日無打卡 && 今日尚未完成任何功課
+function isDeviated() {
+  const doneToday = todayCheckin().done.length;
+  return hasPastActivity() && !isActive(state.checkins[dateKeyOffset(1)]) && doneToday === 0;
 }
 
 // ---------------- 計算 ----------------
@@ -116,18 +149,50 @@ function addGoal(category, title) {
   saveState(); render();
 }
 function deleteGoal(id) {
+  // 只從目前功課清單移除；不動歷史 checkins（保住「那天做過什麼」的紀錄）
   state.goals = state.goals.filter(g => g.id !== id);
-  for (const k in state.checkins)
-    state.checkins[k].done = (state.checkins[k].done || []).filter(x => x !== id);
   saveState(); render();
 }
 function toggleTask(id, el) {
   const c = todayCheckin();
   const i = c.done.indexOf(id);
   const nowDone = i < 0;
-  if (i >= 0) c.done.splice(i, 1); else c.done.push(id);
-  if (nowDone && el) burstEffect(el);   // 完成小特效
+  if (i >= 0) {
+    c.done.splice(i, 1);
+  } else {
+    c.done.push(id);
+    const g = state.goals.find(x => x.id === id);   // 完成時存標題快照
+    if (g) { c.titles = c.titles || {}; c.titles[id] = g.title; }
+  }
+  if (nowDone && el) burstEffect(el);   // 光點用點擊處座標，render 前先抓
   saveState(); render();
+  if (nowDone) swordFlash();            // 劍光要在 render 之後加，否則會被重畫清掉
+}
+
+// 週計畫操作（純安排、不計修為）
+function addWeekItem(title) {
+  title = (title || "").trim(); if (!title) return;
+  currentWeekItems().push({ id: "w" + Date.now(), title, done: false });
+  saveState(); render();
+}
+function toggleWeekItem(id) {
+  const it = currentWeekItems().find(x => x.id === id);
+  if (it) it.done = !it.done; saveState(); render();
+}
+function deleteWeekItem(id) {
+  const k = currentWeekKey();
+  state.weeks[k] = (state.weeks[k] || []).filter(x => x.id !== id);
+  saveState(); render();
+}
+
+// 斬心魔劍光
+function swordFlash() {
+  const host = document.getElementById("heartDemon");
+  if (!host) return;
+  const f = document.createElement("div");
+  f.className = "sword-flash";
+  host.appendChild(f);
+  setTimeout(() => f.remove(), 360);
 }
 
 // 道侶名號
@@ -239,12 +304,130 @@ function showPage(name) {
 function render() {
   renderStatus();
   renderToday();
+  renderHeartDemon();
+  renderWeekly();
+  renderDeviation();
   renderLog();
+  renderWeekReview();
   renderStats();
   renderAchv();
   renderMe();
   state.lastLevel = calcLevel(calcXp(state)).level;
   saveState();
+}
+
+// 今日心魔的 SVG（暗色煙霧團 + 發光眼）
+function demonSVG() {
+  return `<svg class="demon" viewBox="0 0 80 80" aria-hidden="true">
+    <g class="smoke">
+      <circle cx="40" cy="46" r="22"/><circle cx="25" cy="41" r="13"/>
+      <circle cx="55" cy="41" r="13"/><circle cx="40" cy="29" r="15"/>
+    </g>
+    <circle class="eye" cx="33" cy="41" r="3.4"/><circle class="eye" cx="47" cy="41" r="3.4"/>
+    <path class="mouth" d="M32 53 q8 6 16 0" fill="none"/>
+  </svg>`;
+}
+
+function renderHeartDemon() {
+  const host = document.getElementById("heartDemon");
+  const max = state.goals.length;
+  const done = todayCheckin().done.length;
+  const remain = Math.max(0, max - done);
+  if (max === 0) {
+    host.className = "card demon-card dormant";
+    host.innerHTML = `<div class="demon-stage">${demonSVG()}</div>
+      <div class="demon-info"><div class="demon-name">今日心魔 · 蟄伏</div>
+      <div class="demon-hint">今日尚無功課，心魔蟄伏。往「我的」立下功課即可開戰。</div></div>`;
+    return;
+  }
+  if (remain === 0) {
+    host.className = "card demon-card slain";
+    host.innerHTML = `<div class="demon-stage">${demonSVG()}<div class="slain-mark">心魔已破 ✦</div></div>
+      <div class="demon-info"><div class="demon-name">今日心魔 · 已斬</div>
+      <div class="demon-hint">今日功課盡數完成，心魔潰散，道心清明。</div></div>`;
+    return;
+  }
+  const pct = Math.round(remain / max * 100);
+  host.className = "card demon-card";
+  host.innerHTML = `<div class="demon-stage">${demonSVG()}</div>
+    <div class="demon-info">
+      <div class="demon-name">今日心魔</div>
+      <div class="demon-hpbar"><div class="demon-hp" style="width:${pct}%"></div></div>
+      <div class="demon-hint">尚餘氣血 ${remain} / ${max}　完成功課以劍斬之</div>
+    </div>`;
+}
+
+function renderWeekly() {
+  const mon = mondayOf(new Date());
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  document.getElementById("weekRange").textContent =
+    `本週 ${mon.getMonth() + 1}/${mon.getDate()}–${sun.getMonth() + 1}/${sun.getDate()}　過去各週可於「紀錄」回顧`;
+  const items = currentWeekItems();
+  const list = document.getElementById("weekList");
+  list.innerHTML = "";
+  if (items.length === 0) { list.innerHTML = '<li class="empty-hint">本週還沒立下備忘 ✧</li>'; return; }
+  items.forEach(it => {
+    const li = document.createElement("li");
+    const box = document.createElement("span");
+    box.className = "check" + (it.done ? " done" : "");
+    box.textContent = it.done ? "✓" : "";
+    box.onclick = () => toggleWeekItem(it.id);
+    const text = document.createElement("span");
+    text.className = "task-text" + (it.done ? " done" : "");
+    text.textContent = it.title;
+    const del = document.createElement("button");
+    del.className = "del-btn"; del.textContent = "✕"; del.onclick = () => deleteWeekItem(it.id);
+    li.appendChild(box); li.appendChild(text); li.appendChild(del);
+    list.appendChild(li);
+  });
+}
+
+function renderDeviation() {
+  const dev = isDeviated();
+  document.body.classList.toggle("deviated", dev);
+  const today = document.getElementById("page-today");
+  let banner = document.getElementById("devBanner");
+  if (dev) {
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "devBanner"; banner.className = "dev-banner";
+      today.insertBefore(banner, today.firstChild);
+    }
+    banner.innerHTML = "⚠ 走火入魔 — 昨日斷了修行，心神紊亂。<b>今日完成任一功課即可歸位。</b>";
+  } else if (banner) { banner.remove(); }
+}
+
+function renderWeekReview() {
+  const wrap = document.getElementById("weekReview");
+  const allWeeks = new Set(Object.keys(state.weeks || {}).filter(k => (state.weeks[k] || []).length > 0));
+  for (const dk in state.checkins) if (isActive(state.checkins[dk])) allWeeks.add(weekKey(new Date(dk + "T00:00:00")));
+  const sorted = [...allWeeks].sort().reverse();
+  if (sorted.length === 0) { wrap.innerHTML = '<p class="empty-hint">本週開始累積後，這裡會逐週封存 ✧</p>'; return; }
+  const ck = currentWeekKey();
+  wrap.innerHTML = "";
+  sorted.forEach(wk => {
+    const mon = new Date(wk + "T00:00:00"); const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const items = (state.weeks && state.weeks[wk]) || [];
+    let days = 0, doneCount = 0; const tally = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon); d.setDate(mon.getDate() + i);
+      const c = state.checkins[dateKey(d)];
+      if (isActive(c)) days++;
+      ((c && c.done) || []).forEach(id => { doneCount++; const t = titleOf(c, id); tally[t] = (tally[t] || 0) + 1; });
+    }
+    const tallyStr = Object.keys(tally).map(t => `${t}×${tally[t]}`).join("、") || "（無）";
+    const itemsHtml = items.length
+      ? `<ul class="wr-items">` + items.map(it => `<li class="${it.done ? "done" : ""}">${it.done ? "✓" : "○"} ${escapeHtml(it.title)}</li>`).join("") + `</ul>`
+      : `<div class="wr-empty">（本週未立備忘）</div>`;
+    const div = document.createElement("div");
+    div.className = "wr-week" + (wk === ck ? " current" : "");
+    div.innerHTML =
+      `<div class="wr-head"><span class="wr-range">${mon.getMonth() + 1}/${mon.getDate()}–${sun.getMonth() + 1}/${sun.getDate()}</span>` +
+      `${wk === ck ? '<span class="wr-now">本週</span>' : ""}</div>` +
+      `<div class="wr-label">週備忘</div>${itemsHtml}` +
+      `<div class="wr-summary">本週修煉 ${days} 日 · 完成功課 ${doneCount} 項<div class="wr-tally">${escapeHtml(tallyStr)}</div></div>`;
+    wrap.appendChild(div);
+  });
 }
 
 function renderStatus() {
@@ -359,10 +542,15 @@ function renderLog() {
       item.className = "tl-item";
       const dateStr = `${dt.getMonth() + 1}月${dt.getDate()}日 週${wk[dt.getDay()]}`;
       const note = (c.note && c.note.trim()) ? c.note : "（未留言）";
+      const doneTitles = (c.done || []).map(id => titleOf(c, id));
+      const tasksHtml = doneTitles.length
+        ? `<div class="tl-tasks">${doneTitles.map(t => `<span class="tl-task">${escapeHtml(t)}</span>`).join("")}</div>`
+        : "";
       item.innerHTML =
         `<div class="tl-dot">${c.mood || "·"}</div>` +
         `<div class="tl-body"><div class="tl-date">${dateStr}` +
         `<span class="tl-count">${(c.done || []).length} 課</span></div>` +
+        tasksHtml +
         `<div class="tl-note">${escapeHtml(note)}</div></div>`;
       tl.appendChild(item);
     });
@@ -503,6 +691,12 @@ function init() {
   const submit = () => { addGoal(goalCat.value, goalInput.value); goalInput.value = ""; goalInput.focus(); };
   addBtn.onclick = submit;
   goalInput.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+  // 本週備忘：新增
+  const weekInput = document.getElementById("weekInput");
+  const subW = () => { addWeekItem(weekInput.value); weekInput.value = ""; weekInput.focus(); };
+  document.getElementById("weekAddBtn").onclick = subW;
+  weekInput.addEventListener("keydown", e => { if (e.key === "Enter") subW(); });
 
   // 今日一語：邊打邊存
   document.getElementById("noteInput").addEventListener("input", e => setNote(e.target.value));
