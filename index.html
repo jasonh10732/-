@@ -9,7 +9,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f3ece0" />
-  <title>暑期修煉錄</title>
+  <title>問道錄</title>
 
   <!-- 防止「閃一下」：畫面前先決定亮/深色（記住的優先，否則跟系統） -->
   <script>
@@ -78,7 +78,7 @@
     <!-- ====== 頂部狀態列：境界 + 修為 + 連續修煉（各頁共用） ====== -->
     <header class="statusbar">
       <button id="musicToggle" class="music-btn" aria-label="背景音樂">♪</button>
-      <div class="brand">暑期修煉錄</div>
+      <div class="brand">問道錄</div>
       <div class="status-row">
         <div class="jingjie" id="jingjieBox" title="境界">
           <span class="jingjie-char" id="jingjieChar">練</span>
@@ -105,6 +105,7 @@
           <div class="coach-bubble">
             <p class="coach-name" id="coachName">鶴翁</p>
             <p class="coach-msg" id="coachMsg">道友今日來了，且看今日修些什麼？</p>
+            <p class="daily-quote" id="dailyQuote">今日箴言 · —</p>
           </div>
         </div>
 
@@ -113,14 +114,32 @@
           <div class="mood-row" id="moodRow"></div>
         </div>
 
-        <!-- 今日心魔：血量＝當日功課數，完成功課即扣血、全清斬殺 -->
+        <!-- 今日心魔：血量＝當日任務數，完成即扣血、全清斬殺 -->
         <div class="card demon-card" id="heartDemon"></div>
 
+        <!-- 今日三事：每日精選，最多 3（兼今日臨時任務） -->
         <div class="card">
-          <h2>今日功課</h2>
-          <p class="sub">完成一項即增修為、斬心魔，往「我的」可新增功課</p>
+          <h2>今日三事</h2>
+          <p class="sub">每天先挑最重要的 1–3 件，聚焦不貪多</p>
+          <div class="add-goal">
+            <select id="top3Diff">
+              <option value="easy">易</option>
+              <option value="mid" selected>中</option>
+              <option value="hard">難</option>
+            </select>
+            <input type="text" id="top3Input" placeholder="挑一件今日要事…" />
+            <button id="top3AddBtn" class="primary-btn">＋</button>
+          </div>
+          <ul class="checklist" id="top3List">
+            <li class="empty-hint">今日尚未挑選要事，最多三件 ✧</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>固定功課</h2>
+          <p class="sub">日日精進的功課（難度越高給越多修為）</p>
           <ul class="checklist" id="todayList">
-            <li class="empty-hint">尚未立下功課，往「我的」分頁新增 ✧</li>
+            <li class="empty-hint">尚未立下固定功課，往「我的」分頁新增 ✧</li>
           </ul>
         </div>
 
@@ -160,8 +179,15 @@
           </div>
         </div>
         <div class="card">
+          <h2>功課錄</h2>
+          <p class="sub">完成過的每一筆任務，可翻頁回顧（過了不會消失）</p>
+          <div class="tasklog" id="taskLog">
+            <p class="empty-hint">完成任務後，這裡會逐筆記錄 ✧</p>
+          </div>
+        </div>
+        <div class="card">
           <h2>每週回顧</h2>
-          <p class="sub">每週的備忘與當週完成的功課小結</p>
+          <p class="sub">每週的備忘與當週完成的任務小結</p>
           <div class="weekreview" id="weekReview">
             <p class="empty-hint">本週開始累積後，這裡會逐週封存 ✧</p>
           </div>
@@ -170,6 +196,11 @@
 
       <!-- ========== 統計 ========== -->
       <section class="page" id="page-stats">
+        <div class="card">
+          <h2>紀錄牆</h2>
+          <p class="sub">堅持的證明：連續、最長、護道符</p>
+          <div class="streak-wall" id="streakWall"></div>
+        </div>
         <div class="card">
           <h2>修行總覽</h2>
           <div class="stat-grid" id="statGrid"></div>
@@ -192,6 +223,11 @@
           <div class="achv-list" id="achvList"></div>
         </div>
         <div class="card">
+          <h2>獎勵閣</h2>
+          <p class="sub">修為達一定境界即解鎖點綴色，可啟用</p>
+          <div class="rewards" id="rewards"></div>
+        </div>
+        <div class="card">
           <h2>境界階梯</h2>
           <p class="sub">每滿百修為，晉升一重境界</p>
           <div class="ladder" id="ladder"></div>
@@ -208,6 +244,11 @@
               <option value="learn">問道</option>
               <option value="work">勤修</option>
               <option value="fun">遊歷</option>
+            </select>
+            <select id="goalDiff">
+              <option value="easy">易</option>
+              <option value="mid" selected>中</option>
+              <option value="hard">難</option>
             </select>
             <input type="text" id="goalInput" placeholder="立一項功課…" />
             <button id="addGoalBtn" class="primary-btn">＋</button>
@@ -247,7 +288,7 @@
 
         <div class="card about">
           <h2>關於</h2>
-          <p>暑期修煉錄 —— 把暑假化作一段修行：立功課、每日精進、累積修為、晉升境界。</p>
+          <p>問道錄 —— 把日子化作一段修行：立功課、每日精進、累積修為、晉升境界，長期相伴。</p>
           <p class="dim">資料只存在你這支手機（localStorage），不上傳。由你親手打造。</p>
         </div>
       </section>

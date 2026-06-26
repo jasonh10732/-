@@ -8,7 +8,7 @@
 
 /* ---------- 亮色 ---------- */
 :root {
-  --paper:#f3ece0; --paper2:#faf5ea; --ink:#211d18; --ink-soft:#5b5347;
+  --paper:#f3ece0; --paper2:rgba(250,245,234,.82); --bar:rgba(243,236,224,.72); --ink:#211d18; --ink-soft:#5b5347;
   --muted:#938b7c; --line:#e2d8c4; --field:#efe7d8;
   --seal:#b5403a; --seal2:#d4655d; --seal-soft:rgba(181,64,58,.10);
   --gold:#b08a43; --gold-soft:rgba(176,138,67,.30); --glow:rgba(176,138,67,.45);
@@ -18,7 +18,7 @@
 }
 /* ---------- 深色 ---------- */
 [data-theme="dark"]{
-  --paper:#18181d; --paper2:#202027; --ink:#ece6da; --ink-soft:#b3ab9b;
+  --paper:#18181d; --paper2:rgba(32,32,39,.78); --bar:rgba(22,22,27,.66); --ink:#ece6da; --ink-soft:#b3ab9b;
   --muted:#857d6e; --line:#33323b; --field:#26262e;
   --seal:#db6a62; --seal2:#e98981; --seal-soft:rgba(219,106,98,.16);
   --gold:#c9a861; --gold-soft:rgba(201,168,97,.28); --glow:rgba(201,168,97,.42);
@@ -58,7 +58,7 @@ body::before{
 
 /* ============ 頂部狀態列 ============ */
 .statusbar{
-  position:sticky; top:0; z-index:20; background:var(--paper);
+  position:sticky; top:0; z-index:20; background:var(--bar); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   margin:0 -16px 16px; padding:calc(env(safe-area-inset-top) + 12px) 16px 14px;
   border-bottom:1px solid var(--gold-soft);
   transition:background-color .35s ease;
@@ -108,6 +108,7 @@ body::before{
 .card{
   position:relative; background:var(--paper2); border:1px solid var(--gold-soft);
   border-radius:16px; padding:18px; margin-bottom:15px; box-shadow:var(--shadow);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   transition:background-color .35s ease, border-color .35s ease;
 }
 .card::before{ /* 內層金線，做出雙框「雕花」感 */
@@ -259,7 +260,8 @@ body::before{
 /* ============ 底部導覽 ============ */
 .tabbar{ position:fixed; left:0; right:0; bottom:0; z-index:30;
   display:flex; justify-content:space-around; align-items:stretch;
-  background:var(--paper2); border-top:1px solid var(--gold-soft);
+  background:var(--bar); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--gold-soft);
   padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -6px 20px rgba(0,0,0,.06);
   transition:background-color .35s ease; }
 .tab{ flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -367,3 +369,46 @@ body.deviated .deviation-veil{ opacity:1; animation:veilPulse 4s ease-in-out inf
 .wr-empty{ font-size:13px; color:var(--muted); }
 .wr-summary{ font-size:12.5px; color:var(--ink-soft); margin-top:8px; border-top:1px dashed var(--line); padding-top:7px; }
 .wr-tally{ color:var(--muted); margin-top:3px; }
+
+/* ============ 難度標記 ============ */
+.diff{ font-size:10px; letter-spacing:-1px; vertical-align:1px; }
+.diff-easy{ color:var(--muted); }
+.diff-mid{ color:var(--gold); }
+.diff-hard{ color:var(--seal); }
+/* 新增區的下拉收窄，容納難度選擇 */
+.add-goal select{ max-width:74px; }
+
+/* ============ 每日箴言 ============ */
+.daily-quote{ margin-top:6px; font-family:var(--serif); font-size:12.5px; color:var(--seal);
+  letter-spacing:.5px; opacity:.9; }
+
+/* ============ 功課錄（可翻頁） ============ */
+.tlog-list{ }
+.tlog-row{ display:flex; align-items:center; gap:9px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:14px; }
+.tlog-row:last-child{ border-bottom:none; }
+.tlog-date{ font-family:var(--serif); font-size:12px; color:var(--muted); min-width:42px; }
+.tlog-title{ flex:1; color:var(--ink); min-width:0; word-break:break-word; }
+.tlog-xp{ font-family:var(--serif); font-weight:700; font-size:12.5px; color:var(--seal); }
+.tlog-nav{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:8px; }
+.tlog-page{ font-size:12px; color:var(--muted); text-align:center; flex:1; }
+.pill-btn[disabled]{ opacity:.4; cursor:default; }
+
+/* ============ 紀錄牆 ============ */
+.streak-wall{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:6px; }
+.wall-tile{ background:var(--field); border:1px solid var(--gold-soft); border-radius:13px; padding:14px 6px; text-align:center; }
+.wall-ic{ font-size:22px; filter:grayscale(.1); }
+.wall-val{ font-family:var(--serif); font-weight:700; font-size:18px; color:var(--seal); text-shadow:0 0 6px var(--glow); margin-top:3px; }
+.wall-key{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* ============ 獎勵閣 ============ */
+.rewards{ margin-top:4px; }
+.reward{ display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--line); }
+.reward:last-child{ border-bottom:none; }
+.reward.locked{ opacity:.55; }
+.reward-dot{ width:18px; height:18px; border-radius:50%; border:1px solid var(--gold-soft); flex-shrink:0; box-shadow:0 0 6px var(--glow); }
+.reward-name{ font-family:var(--serif); font-weight:700; font-size:15px; color:var(--ink); }
+.reward-state{ flex:1; font-size:11.5px; color:var(--muted); }
+.reward-btn{ padding:6px 14px; }
+
+/* 月曆：護道符護持日 */
+.cal-cell.shielded{ background:var(--seal-soft); border:1px dashed var(--gold-soft); color:var(--ink-soft); }

@@ -1,7 +1,7 @@
 {
-  "name": "暑期修煉錄",
-  "short_name": "暑期修煉錄",
-  "description": "把暑假化作一段修行：立功課、每日精進、累積修為、晉升境界，還有道侶鶴翁相伴。",
+  "name": "問道錄",
+  "short_name": "問道錄",
+  "description": "把日子化作一段修行：立功課、每日精進、累積修為、晉升境界，長期相伴。",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3ece0",
