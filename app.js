@@ -33,7 +33,7 @@ const BADGES = [
 
 // ---------------- 資料 ----------------
 function emptyState() {
-  return { goals: [], checkins: {}, lastLevel: 1 };
+  return { goals: [], checkins: {}, lastLevel: 1, coachName: "" };
 }
 function loadState() {
   try {
@@ -121,11 +121,39 @@ function deleteGoal(id) {
     state.checkins[k].done = (state.checkins[k].done || []).filter(x => x !== id);
   saveState(); render();
 }
-function toggleTask(id) {
+function toggleTask(id, el) {
   const c = todayCheckin();
   const i = c.done.indexOf(id);
+  const nowDone = i < 0;
   if (i >= 0) c.done.splice(i, 1); else c.done.push(id);
+  if (nowDone && el) burstEffect(el);   // 完成小特效
   saveState(); render();
+}
+
+// 道侶名號
+function getCoachName() { return (state.coachName && state.coachName.trim()) || "鶴翁"; }
+function setCoachName(v) { state.coachName = (v || "").slice(0, 6); saveState(); render(); }
+
+// 功課完成時的光點 + 浮字特效（豐富但克制）
+function burstEffect(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  for (let k = 0; k < 7; k++) {
+    const s = document.createElement("span");
+    s.className = "spark-fx";
+    const ang = Math.random() * Math.PI * 2, dist = 16 + Math.random() * 22;
+    s.style.left = cx + "px"; s.style.top = cy + "px";
+    s.style.setProperty("--dx", (Math.cos(ang) * dist).toFixed(1) + "px");
+    s.style.setProperty("--dy", (Math.sin(ang) * dist).toFixed(1) + "px");
+    if (k % 2) s.style.background = "var(--seal)";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 650);
+  }
+  const t = document.createElement("div");
+  t.className = "xp-pop"; t.textContent = "+10 修為";
+  t.style.left = cx + "px"; t.style.top = (cy - 12) + "px";
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 900);
 }
 function setMood(m) { todayCheckin().mood = m; saveState(); render(); }
 function setNote(text) { todayCheckin().note = text; saveState(); }
@@ -149,6 +177,53 @@ function applyTheme(t) {
   if (meta) meta.setAttribute("content", t === "dark" ? "#18181d" : "#f3ece0");
 }
 function toggleTheme() { applyTheme(currentTheme() === "dark" ? "light" : "dark"); }
+
+// ---------------- 背景音樂 ----------------
+const MUSIC_KEY = "sq-music";
+function musicOn() { try { return localStorage.getItem(MUSIC_KEY) === "on"; } catch (e) { return false; } }
+function applyMusicUI(on) {
+  const a = document.getElementById("musicToggle");
+  const b = document.getElementById("musicToggle2");
+  if (a) a.classList.toggle("on", on);
+  if (b) b.textContent = on ? "♪ 暫停" : "♪ 播放";
+}
+function setMusic(on) {
+  const bgm = document.getElementById("bgm");
+  try { localStorage.setItem(MUSIC_KEY, on ? "on" : "off"); } catch (e) {}
+  if (bgm) {
+    if (on) { bgm.volume = 0.35; bgm.play().catch(() => {}); }
+    else { bgm.pause(); }
+  }
+  applyMusicUI(on);
+}
+function toggleMusic() { setMusic(!musicOn()); }
+
+// ---------------- 匯出 / 匯入備份 ----------------
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const a = document.createElement("a");
+  a.href = url; a.download = `xiulianlu-backup-${ymd}.json`;  // 純英數，確保各裝置存成 .json
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let obj;
+    try { obj = JSON.parse(reader.result); } catch (e) { alert("匯入失敗：檔案不是有效的備份"); return; }
+    if (!obj || typeof obj !== "object" || typeof obj.checkins !== "object" || !Array.isArray(obj.goals)) {
+      alert("匯入失敗：備份格式不正確"); return;
+    }
+    if (!confirm("匯入將「取代」目前所有資料，確定嗎？")) return;
+    state = Object.assign(emptyState(), obj);
+    saveState(); render();
+    alert("匯入成功！你的修煉紀錄已還原。");
+  };
+  reader.readAsText(file);
+}
 
 // ---------------- 分頁 ----------------
 const PAGE_KEY = "sq-page";
@@ -196,8 +271,9 @@ function renderStatus() {
     setTimeout(() => box.classList.remove("celebrate"), 700);
   }
 
-  // 鶴翁說話
+  // 道侶說話
   const c = todayCheckin();
+  document.getElementById("coachName").textContent = getCoachName();
   document.getElementById("coachMsg").textContent = getCoachMessage({
     doneCount: c.done.length, totalCount: state.goals.length,
     mood: c.mood, streak, justLeveled, newTitle: title,
@@ -228,7 +304,7 @@ function renderToday() {
       const box = document.createElement("span");
       box.className = "check" + (done ? " done" : "");
       box.textContent = done ? "✓" : "";
-      box.onclick = () => toggleTask(g.id);
+      box.onclick = (e) => toggleTask(g.id, e.currentTarget);
       const text = document.createElement("span");
       text.className = "task-text" + (done ? " done" : "");
       text.textContent = g.title;
@@ -435,6 +511,27 @@ function init() {
   document.getElementById("resetBtn").onclick = resetAll;
   applyTheme(currentTheme());
   document.getElementById("themeToggle").onclick = toggleTheme;
+
+  // 道侶名號
+  const nameInput = document.getElementById("coachNameInput");
+  nameInput.value = state.coachName || "";
+  nameInput.addEventListener("input", e => setCoachName(e.target.value));
+
+  // 背景音樂
+  applyMusicUI(musicOn());
+  document.getElementById("musicToggle").onclick = toggleMusic;
+  document.getElementById("musicToggle2").onclick = toggleMusic;
+  if (musicOn()) {
+    // 上次開著：等首次互動再播（手機禁止自動播放）
+    const tryStart = () => { const bgm = document.getElementById("bgm"); if (bgm) { bgm.volume = 0.35; bgm.play().catch(() => {}); } };
+    document.addEventListener("pointerdown", tryStart, { once: true });
+  }
+
+  // 匯出 / 匯入
+  document.getElementById("exportBtn").onclick = exportBackup;
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").onclick = () => importFile.click();
+  importFile.onchange = e => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ""; };
 
   // 底部導覽
   document.querySelectorAll(".tab").forEach(t => { t.onclick = () => showPage(t.dataset.page); });

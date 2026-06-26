@@ -272,3 +272,33 @@ body::before{
 
 /* 升境界慶祝 */
 @keyframes pop{ 0%{ transform:scale(1);} 40%{ transform:scale(1.35);} 100%{ transform:scale(1);} }
+
+/* ============ 背景音樂鈕 ============ */
+.music-btn{ position:absolute; z-index:21; top:calc(env(safe-area-inset-top) + 10px); left:14px;
+  width:34px; height:34px; border-radius:50%; border:1px solid var(--gold-soft);
+  background:var(--paper2); color:var(--muted); font-size:15px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:color .2s, box-shadow .25s, border-color .2s; }
+.music-btn.on{ color:var(--seal); border-color:var(--gold); box-shadow:0 0 10px var(--glow);
+  animation:musicPulse 1.6s ease-in-out infinite; }
+@keyframes musicPulse{ 0%,100%{ box-shadow:0 0 6px var(--glow);} 50%{ box-shadow:0 0 14px var(--glow);} }
+
+/* ============ 我的：名號輸入、備份鈕 ============ */
+.name-input{ width:128px; text-align:right; font-family:var(--serif); font-size:14px; color:var(--ink);
+  background:var(--field); border:1px solid var(--gold-soft); border-radius:99px; padding:6px 14px; outline:none;
+  transition:border-color .2s, box-shadow .2s; }
+.name-input:focus{ border-color:var(--gold); box-shadow:0 0 8px var(--glow); }
+.backup-row{ display:flex; gap:10px; margin-top:8px; }
+.backup-row .pill-btn{ flex:1; }
+
+/* ============ 功課完成特效 ============ */
+.spark-fx{ position:fixed; z-index:50; width:6px; height:6px; border-radius:50%;
+  background:var(--gold); box-shadow:0 0 6px var(--glow); transform:translate(-50%,-50%);
+  pointer-events:none; animation:sparkfx .62s ease-out forwards; }
+@keyframes sparkfx{
+  from{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  to{ opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3); } }
+.xp-pop{ position:fixed; z-index:50; transform:translate(-50%,-50%); pointer-events:none;
+  font-family:var(--serif); font-weight:700; font-size:14px; color:var(--seal);
+  text-shadow:0 0 6px var(--glow); animation:xppop .9s ease-out forwards; }
+@keyframes xppop{ 0%{ opacity:0; transform:translate(-50%,-50%);} 20%{ opacity:1;}
+  100%{ opacity:0; transform:translate(-50%,-170%);} }
