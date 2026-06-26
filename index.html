@@ -109,6 +109,9 @@
           </div>
         </div>
 
+        <!-- 長期目標北極星（有才顯示） -->
+        <div class="card" id="longGoalsToday" style="display:none"></div>
+
         <div class="card">
           <h2>今日心境</h2>
           <div class="mood-row" id="moodRow"></div>
@@ -181,6 +184,7 @@
         <div class="card">
           <h2>功課錄</h2>
           <p class="sub">完成過的每一筆任務，可翻頁回顧（過了不會消失）</p>
+          <input type="text" id="taskLogSearch" class="note-input search-input" placeholder="🔍 搜尋做過的任務…" />
           <div class="tasklog" id="taskLog">
             <p class="empty-hint">完成任務後，這裡會逐筆記錄 ✧</p>
           </div>
@@ -253,7 +257,38 @@
             <input type="text" id="goalInput" placeholder="立一項功課…" />
             <button id="addGoalBtn" class="primary-btn">＋</button>
           </div>
+          <p class="sub">重複：點掉不做的星期（全亮＝每天）</p>
+          <div class="wd-picker" id="goalDays">
+            <button type="button" class="wd active" data-wd="0">日</button>
+            <button type="button" class="wd active" data-wd="1">一</button>
+            <button type="button" class="wd active" data-wd="2">二</button>
+            <button type="button" class="wd active" data-wd="3">三</button>
+            <button type="button" class="wd active" data-wd="4">四</button>
+            <button type="button" class="wd active" data-wd="5">五</button>
+            <button type="button" class="wd active" data-wd="6">六</button>
+          </div>
           <div id="goalGroups"></div>
+        </div>
+
+        <div class="card">
+          <h2>本週排程</h2>
+          <p class="sub">每天排定的固定功課，一眼規劃整週</p>
+          <div class="schedule" id="schedule"></div>
+        </div>
+
+        <div class="card">
+          <h2>長期目標</h2>
+          <p class="sub">月／季的大方向，手動推進進度</p>
+          <div class="add-goal">
+            <select id="longTerm">
+              <option value="month">本月</option>
+              <option value="season">本季</option>
+              <option value="custom">長期</option>
+            </select>
+            <input type="text" id="longInput" placeholder="立一個大目標…" />
+            <button id="longAddBtn" class="primary-btn">＋</button>
+          </div>
+          <div id="longGoalsManage"></div>
         </div>
 
         <div class="card">

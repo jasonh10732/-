@@ -8,7 +8,7 @@
 
 /* ---------- 亮色 ---------- */
 :root {
-  --paper:#f3ece0; --paper2:rgba(250,245,234,.82); --bar:rgba(243,236,224,.72); --ink:#211d18; --ink-soft:#5b5347;
+  --paper:#f3ece0; --paper2:rgba(250,245,234,.66); --bar:rgba(243,236,224,.6); --ink:#211d18; --ink-soft:#5b5347;
   --muted:#938b7c; --line:#e2d8c4; --field:#efe7d8;
   --seal:#b5403a; --seal2:#d4655d; --seal-soft:rgba(181,64,58,.10);
   --gold:#b08a43; --gold-soft:rgba(176,138,67,.30); --glow:rgba(176,138,67,.45);
@@ -18,7 +18,7 @@
 }
 /* ---------- 深色 ---------- */
 [data-theme="dark"]{
-  --paper:#18181d; --paper2:rgba(32,32,39,.78); --bar:rgba(22,22,27,.66); --ink:#ece6da; --ink-soft:#b3ab9b;
+  --paper:#18181d; --paper2:rgba(32,32,39,.62); --bar:rgba(22,22,27,.55); --ink:#ece6da; --ink-soft:#b3ab9b;
   --muted:#857d6e; --line:#33323b; --field:#26262e;
   --seal:#db6a62; --seal2:#e98981; --seal-soft:rgba(219,106,98,.16);
   --gold:#c9a861; --gold-soft:rgba(201,168,97,.28); --glow:rgba(201,168,97,.42);
@@ -412,3 +412,37 @@ body.deviated .deviation-veil{ opacity:1; animation:veilPulse 4s ease-in-out inf
 
 /* 月曆：護道符護持日 */
 .cal-cell.shielded{ background:var(--seal-soft); border:1px dashed var(--gold-soft); color:var(--ink-soft); }
+
+/* ============ 重複星期選擇器 ============ */
+.wd-picker{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
+.wd{ width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line); background:var(--field);
+  color:var(--muted); font-size:13px; font-family:var(--serif); cursor:pointer; transition:all .15s; }
+.wd.active{ border-color:var(--gold); background:var(--seal-soft); color:var(--seal); box-shadow:0 0 6px var(--glow); }
+
+/* ============ 本週排程 ============ */
+.schedule{ margin-top:4px; }
+.sch-row{ display:flex; gap:10px; padding:8px 4px; border-bottom:1px solid var(--line); font-size:13.5px; }
+.sch-row:last-child{ border-bottom:none; }
+.sch-row.today{ background:var(--seal-soft); border-radius:8px; }
+.sch-day{ font-family:var(--serif); font-weight:700; color:var(--ink); min-width:34px; flex-shrink:0; }
+.sch-items{ display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.sch-item{ font-size:12px; color:var(--ink); background:var(--field); border:1px solid var(--gold-soft); border-radius:99px; padding:1px 9px; }
+.sch-empty{ color:var(--muted); }
+
+/* ============ 長期目標 ============ */
+.long-item{ padding:11px 2px; border-bottom:1px solid var(--line); }
+.long-item:last-child{ border-bottom:none; }
+.long-item.done .long-title{ color:var(--seal); }
+.long-top{ display:flex; justify-content:space-between; align-items:baseline; }
+.long-title{ font-family:var(--serif); font-weight:700; font-size:15px; color:var(--ink); }
+.long-term{ font-size:11px; color:var(--seal); border:1px solid var(--gold-soft); border-radius:99px; padding:1px 8px; }
+.long-barwrap{ display:flex; align-items:center; gap:8px; margin:7px 0 4px; }
+.long-bar{ flex:1; height:8px; background:var(--field); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+.long-fill{ height:100%; background:linear-gradient(90deg,var(--seal),var(--gold)); box-shadow:0 0 8px var(--glow); border-radius:99px; transition:width .4s; }
+.long-pct{ font-family:var(--serif); font-size:12px; color:var(--ink-soft); min-width:34px; text-align:right; }
+.long-ctrl{ display:flex; gap:8px; align-items:center; margin-top:6px; }
+.long-ctrl .pill-btn{ padding:5px 12px; font-size:12px; }
+.long-ctrl .del-btn{ margin-left:auto; }
+
+/* ============ 功課錄搜尋 ============ */
+.search-input{ margin-bottom:10px; }

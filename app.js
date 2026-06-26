@@ -67,8 +67,13 @@ const ACCENTS = [
 // ---------------- 資料 ----------------
 function emptyState() {
   return { goals: [], checkins: {}, lastLevel: 1, coachName: "", weeks: {},
-           shields: 0, shieldDays: [], shieldAwardAt: 0, equipAccent: "default" };
+           shields: 0, shieldDays: [], shieldAwardAt: 0, equipAccent: "default", longGoals: [] };
 }
+// 功課是否排定在某星期（wd: 0=日…6=六）。未設或 daily ＝每天
+function goalScheduledOn(g, wd) {
+  return !g.days || g.days === "daily" || (Array.isArray(g.days) && (g.days.length === 0 || g.days.length >= 7 || g.days.includes(wd)));
+}
+function todayGoals() { const wd = new Date().getDay(); return state.goals.filter(g => goalScheduledOn(g, wd)); }
 // 遷移：若沒有持久修為，由歷史估算補回（舊用戶進度不丟）
 function ensureMigrated(s) {
   if (typeof s.xp === "number") return;
@@ -134,7 +139,7 @@ function hasPastActivity() {
 }
 function doneTodayCount() {
   const c = todayCheckin();
-  const g = state.goals.filter(x => c.done.includes(x.id)).length;
+  const g = todayGoals().filter(x => c.done.includes(x.id)).length;
   const t = (c.top3 || []).filter(x => x.done).length;
   return g + t;
 }
@@ -222,13 +227,23 @@ function doneCatCount(s) {
 }
 
 // ---------------- 操作 ----------------
-function addGoal(category, title, diff) {
+function addGoal(category, title, diff, days) {
   title = title.trim(); if (!title) return;
-  state.goals.push({ id: "g" + Date.now(), category, title, diff: diff || "mid" });
+  state.goals.push({ id: "g" + Date.now(), category, title, diff: diff || "mid", days: days || "daily" });
   saveState(); render();
 }
 function deleteGoal(id) {
-  state.goals = state.goals.filter(g => g.id !== id);   // 不動歷史
+  const g = state.goals.find(x => x.id === id);
+  if (!confirm(`刪除「${g ? g.title : "此功課"}」？其完成紀錄與已得修為將一併移除。`)) return;
+  // 完全撤銷：扣回修為、清掉各天此功課的完成紀錄，保持總分一致
+  for (const k in state.checkins) {
+    const c = state.checkins[k];
+    if (c.award && c.award[id] != null) { state.xp = Math.max(0, state.xp - c.award[id]); delete c.award[id]; }
+    if (Array.isArray(c.done)) c.done = c.done.filter(x => x !== id);
+    if (c.titles) delete c.titles[id];
+    if (c.diffs) delete c.diffs[id];
+  }
+  state.goals = state.goals.filter(x => x.id !== id);
   saveState(); render();
 }
 function toggleTask(id, el) {
@@ -270,7 +285,10 @@ function toggleTop3(id, el) {
   if (nowDone) swordFlash();
 }
 function delTop3(id) {
-  const c = todayCheckin(); c.top3 = (c.top3 || []).filter(x => x.id !== id);
+  const c = todayCheckin();
+  const it = (c.top3 || []).find(x => x.id === id);
+  if (it && it.done) state.xp = Math.max(0, state.xp - (it.xp || 0));   // 已完成的要扣回修為
+  c.top3 = (c.top3 || []).filter(x => x.id !== id);
   saveState(); render();
 }
 
@@ -417,10 +435,26 @@ function quoteForToday() {
 
 // ================= 畫面 =================
 let taskLogPage = 0;
+let taskLogQuery = "";
+
+// 長期目標（月/季）
+const LONG_TERMS = { month: "本月", season: "本季", custom: "長期" };
+function addLongGoal(title, term) {
+  title = (title || "").trim(); if (!title) return;
+  state.longGoals = state.longGoals || [];
+  state.longGoals.push({ id: "L" + Date.now(), title, term: term || "month", progress: 0 });
+  saveState(); render();
+}
+function bumpLong(id, delta) {
+  const it = (state.longGoals || []).find(x => x.id === id);
+  if (it) { it.progress = Math.max(0, Math.min(100, (it.progress || 0) + delta)); saveState(); render(); }
+}
+function delLongGoal(id) { state.longGoals = (state.longGoals || []).filter(x => x.id !== id); saveState(); render(); }
 
 function render() {
   awardShields();
   renderStatus();
+  renderLongGoals();
   renderToday();
   renderTop3();
   renderHeartDemon();
@@ -434,8 +468,53 @@ function render() {
   renderAchv();
   renderRewards();
   renderMe();
+  renderSchedule();
   state.lastLevel = levelInfo(state.xp).level;
   saveState();
+}
+
+// 長期目標：今日北極星卡（有才顯示）＋ 我的管理
+function longRow(g, withControls) {
+  const term = LONG_TERMS[g.term] || "長期";
+  const done = (g.progress || 0) >= 100;
+  return `<div class="long-item${done ? " done" : ""}">
+    <div class="long-top"><span class="long-title">${escapeHtml(g.title)}${done ? " ✦" : ""}</span><span class="long-term">${term}</span></div>
+    <div class="long-barwrap"><div class="long-bar"><div class="long-fill" style="width:${g.progress || 0}%"></div></div><span class="long-pct">${g.progress || 0}%</span></div>
+    ${withControls ? `<div class="long-ctrl"><button class="pill-btn" data-long="dec" data-id="${g.id}">−10%</button><button class="pill-btn" data-long="inc" data-id="${g.id}">＋10%</button><button class="del-btn" data-long="del" data-id="${g.id}">✕</button></div>` : ""}
+  </div>`;
+}
+function bindLong(root) {
+  root.querySelectorAll("[data-long]").forEach(b => {
+    const id = b.dataset.id, act = b.dataset.long;
+    b.onclick = () => { if (act === "inc") bumpLong(id, 10); else if (act === "dec") bumpLong(id, -10); else delLongGoal(id); };
+  });
+}
+function renderLongGoals() {
+  const list = state.longGoals || [];
+  const manage = document.getElementById("longGoalsManage");
+  if (manage) {
+    manage.innerHTML = list.length ? list.map(g => longRow(g, true)).join("") : '<p class="empty-hint">尚無長期目標，立一個大方向 ✧</p>';
+    bindLong(manage);
+  }
+  const todayCard = document.getElementById("longGoalsToday");
+  if (todayCard) {
+    if (list.length === 0) { todayCard.style.display = "none"; todayCard.innerHTML = ""; }
+    else { todayCard.style.display = ""; todayCard.innerHTML = `<h2>長期目標</h2><p class="sub">你的北極星 · 在「我的」可調整</p>` + list.map(g => longRow(g, false)).join(""); }
+  }
+}
+
+// 週排程總覽（我的）
+function renderSchedule() {
+  const wrap = document.getElementById("schedule");
+  if (!wrap) return;
+  const names = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const today = new Date().getDay();
+  wrap.innerHTML = order.map(wd => {
+    const gs = state.goals.filter(g => goalScheduledOn(g, wd));
+    const items = gs.length ? gs.map(g => `<span class="sch-item">${escapeHtml(g.title)}</span>`).join("") : '<span class="sch-empty">—</span>';
+    return `<div class="sch-row${wd === today ? " today" : ""}"><span class="sch-day">${names[wd]}</span><span class="sch-items">${items}</span></div>`;
+  }).join("");
 }
 
 function demonSVG() {
@@ -469,7 +548,7 @@ function renderStatus() {
   const c = todayCheckin();
   document.getElementById("coachName").textContent = getCoachName();
   document.getElementById("coachMsg").textContent = getCoachMessage({
-    doneCount: doneTodayCount(), totalCount: state.goals.length + (c.top3 || []).length,
+    doneCount: doneTodayCount(), totalCount: todayGoals().length + (c.top3 || []).length,
     mood: c.mood, streak, justLeveled, newTitle: li.name,
   });
   const q = document.getElementById("dailyQuote");
@@ -491,10 +570,13 @@ function renderToday() {
 
   const list = document.getElementById("todayList");
   list.innerHTML = "";
+  const tg = todayGoals();
   if (state.goals.length === 0) {
     list.innerHTML = '<li class="empty-hint">尚未立下固定功課，往「我的」分頁新增 ✧</li>';
+  } else if (tg.length === 0) {
+    list.innerHTML = '<li class="empty-hint">今日無排定的固定功課（可在「我的」調整重複星期）</li>';
   } else {
-    state.goals.forEach(g => {
+    tg.forEach(g => {
       const done = c.done.includes(g.id);
       const li = document.createElement("li");
       const box = document.createElement("span");
@@ -543,7 +625,7 @@ function renderTop3() {
 function renderHeartDemon() {
   const host = document.getElementById("heartDemon");
   const c = todayCheckin();
-  const max = state.goals.length + (c.top3 || []).length;
+  const max = todayGoals().length + (c.top3 || []).length;
   const done = doneTodayCount();
   const remain = Math.max(0, max - done);
   if (max === 0) {
@@ -663,7 +745,9 @@ function allDoneEntries() {
 function renderTaskLog() {
   const wrap = document.getElementById("taskLog");
   if (!wrap) return;
-  const entries = allDoneEntries();
+  const q = taskLogQuery.trim();
+  let entries = allDoneEntries();
+  if (q) entries = entries.filter(e => e.title.indexOf(q) >= 0);
   const perPage = 12;
   const pages = Math.max(1, Math.ceil(entries.length / perPage));
   if (taskLogPage >= pages) taskLogPage = pages - 1;
@@ -870,13 +954,32 @@ let state = loadState();
 applyShields();
 
 function init() {
-  // 立固定功課（含難度）
+  // 立固定功課（含難度、重複星期）
   const goalInput = document.getElementById("goalInput");
   const goalCat = document.getElementById("goalCategory");
   const goalDiff = document.getElementById("goalDiff");
-  const submitG = () => { addGoal(goalCat.value, goalInput.value, goalDiff ? goalDiff.value : "mid"); goalInput.value = ""; goalInput.focus(); };
+  const daysPicker = document.getElementById("goalDays");
+  const readGoalDays = () => {
+    if (!daysPicker) return "daily";
+    const active = [...daysPicker.querySelectorAll(".wd.active")].map(b => +b.dataset.wd);
+    return active.length >= 7 ? "daily" : active;
+  };
+  const resetGoalDays = () => { if (daysPicker) daysPicker.querySelectorAll(".wd").forEach(b => b.classList.add("active")); };
+  if (daysPicker) daysPicker.querySelectorAll(".wd").forEach(b => { b.onclick = () => b.classList.toggle("active"); });
+  const submitG = () => { addGoal(goalCat.value, goalInput.value, goalDiff ? goalDiff.value : "mid", readGoalDays()); goalInput.value = ""; resetGoalDays(); goalInput.focus(); };
   document.getElementById("addGoalBtn").onclick = submitG;
   goalInput.addEventListener("keydown", e => { if (e.key === "Enter") submitG(); });
+
+  // 長期目標
+  const longInput = document.getElementById("longInput");
+  const longTerm = document.getElementById("longTerm");
+  const submitL = () => { addLongGoal(longInput.value, longTerm ? longTerm.value : "month"); longInput.value = ""; longInput.focus(); };
+  document.getElementById("longAddBtn").onclick = submitL;
+  longInput.addEventListener("keydown", e => { if (e.key === "Enter") submitL(); });
+
+  // 功課錄搜尋
+  const search = document.getElementById("taskLogSearch");
+  if (search) search.addEventListener("input", e => { taskLogQuery = e.target.value; taskLogPage = 0; renderTaskLog(); });
 
   // 今日三事（含難度）
   const t3Input = document.getElementById("top3Input");
