@@ -1,11 +1,11 @@
 {
-  "name": "暑假大冒險",
-  "short_name": "暑假大冒險",
-  "description": "把暑假目標變成每日打卡的闖關遊戲，還有 AI 夥伴幫你打氣。",
+  "name": "暑期修煉錄",
+  "short_name": "暑期修煉錄",
+  "description": "把暑假化作一段修行：立功課、每日精進、累積修為、晉升境界，還有道侶鶴翁相伴。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f3f1ff",
-  "theme_color": "#6d5dfc",
+  "background_color": "#f3ece0",
+  "theme_color": "#b08a43",
   "orientation": "portrait",
   "icons": [
     {

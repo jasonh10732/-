@@ -1,240 +1,212 @@
 /*
-  暑假大冒險 — 核心引擎
+  暑期修煉錄 — 核心引擎
   =================================================
-  這個檔負責「資料」與「畫面」：
-    1. 從手機本機（localStorage）讀出你的資料
-    2. 你按按鈕時更新資料
-    3. 重新把畫面畫出來，並把資料存回去
-  資料只存在你這支手機，不會上傳到任何地方。
+  負責「資料」與「畫面」：從手機本機讀資料、你操作時更新、再重畫並存回。
+  資料只存在你這支手機（localStorage），不上傳。
 */
 
-// localStorage 裡用這個名字存資料
-const SAVE_KEY = "summer-quest-v1";
-
-// 心情選項
+const SAVE_KEY = "summer-quest-v1";   // 沿用舊鍵，既有打卡資料不會不見
 const MOODS = ["😀", "🙂", "😐", "😫", "😴"];
 
-// 目標三大分類（顯示用的標題與圖示）
+// 三類功課
 const CATEGORIES = {
-  learn: { label: "📚 想學的", icon: "📚" },
-  work:  { label: "💪 想認真做的", icon: "💪" },
-  fun:   { label: "🎮 想玩的", icon: "🎮" },
+  learn: { label: "問道（想學）" },
+  work:  { label: "勤修（想做）" },
+  fun:   { label: "遊歷（想玩）" },
 };
 
-// 成就徽章的定義。check(s) 會拿到整份資料，回傳 true 代表解鎖
+// 境界階梯：每滿 100 修為晉一重
+const JINGJIE = ["練氣", "築基", "金丹", "元嬰", "化神", "煉虛", "合體", "大乘", "渡劫", "飛昇"];
+
+const XP_PER_TASK = 10;       // 每完成一項功課
+const XP_PER_DAY  = 5;        // 每有修煉的一日
+
+// 成就（道行）：cond＝達成條件文案；prog＝目前進度 {cur,max}
 const BADGES = [
-  { id: "first",     icon: "🌱", name: "啟程",     check: s => totalDoneCount(s) >= 1 },
-  { id: "streak3",   icon: "🔥", name: "三連發",   check: s => calcStreak(s) >= 3 },
-  { id: "streak7",   icon: "⚡", name: "一週連線", check: s => calcStreak(s) >= 7 },
-  { id: "done10",    icon: "🏅", name: "完成 10 項", check: s => totalDoneCount(s) >= 10 },
-  { id: "level5",    icon: "⭐", name: "等級 5",   check: s => calcLevel(calcXp(s)).level >= 5 },
-  { id: "allcat",    icon: "🌈", name: "全才",     check: s => doneAllCategories(s) },
+  { id: "first",   icon: "ic-sprout",  name: "初心",     cond: "完成第一項功課",        prog: s => ({ cur: Math.min(totalDoneCount(s), 1), max: 1 }) },
+  { id: "streak3", icon: "ic-flame",   name: "三日不輟", cond: "連續修煉 3 日",          prog: s => ({ cur: Math.min(calcStreak(s), 3), max: 3 }) },
+  { id: "streak7", icon: "ic-bolt",    name: "七日精進", cond: "連續修煉 7 日",          prog: s => ({ cur: Math.min(calcStreak(s), 7), max: 7 }) },
+  { id: "done10",  icon: "ic-medal",   name: "百尺竿頭", cond: "累計完成 10 項功課",      prog: s => ({ cur: Math.min(totalDoneCount(s), 10), max: 10 }) },
+  { id: "jindan",  icon: "ic-pill",    name: "金丹之境", cond: "修為晉入金丹境（第 3 重）", prog: s => ({ cur: Math.min(calcLevel(calcXp(s)).level, 3), max: 3 }) },
+  { id: "sancai",  icon: "ic-trigram", name: "三才兼修", cond: "三類功課各完成過一項",    prog: s => ({ cur: doneCatCount(s), max: 3 }) },
 ];
 
-// 每完成一項目標得到的經驗值；每天有打卡額外加成
-const XP_PER_TASK = 10;
-const XP_PER_CHECKIN_DAY = 5;
-
-// -------------------------------------------------
-// 資料的讀取與儲存
-// -------------------------------------------------
-
-// 預設的空白資料
+// ---------------- 資料 ----------------
 function emptyState() {
-  return {
-    goals: [],      // [{ id, category, title }]
-    checkins: {},    // { "2026-06-26": { done: [goalId...], mood: "😀", note: "" } }
-    seenBadges: [],  // 已經慶祝過的徽章，避免重複跳動畫
-    lastLevel: 1,    // 記住上次的等級，用來判斷「剛升等」
-  };
+  return { goals: [], checkins: {}, lastLevel: 1 };
 }
-
-// 從本機讀資料；讀不到就給一份空白的
 function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return emptyState();
     return Object.assign(emptyState(), JSON.parse(raw));
-  } catch (e) {
-    return emptyState();
-  }
+  } catch (e) { return emptyState(); }
 }
+function saveState() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 
-// 把資料存回本機
-function saveState() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-}
-
-// 今天的日期字串，例如 "2026-06-26"
-function todayKey() {
-  const d = new Date();
+function dateKey(d) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${day}`;
 }
-
-// 拿到「今天」這筆打卡資料（沒有就建一個空的）
+function todayKey() { return dateKey(new Date()); }
 function todayCheckin() {
   const k = todayKey();
-  if (!state.checkins[k]) {
-    state.checkins[k] = { done: [], mood: "", note: "" };
-  }
+  if (!state.checkins[k]) state.checkins[k] = { done: [], mood: "", note: "" };
   return state.checkins[k];
 }
+function isActive(c) {
+  return c && (((c.done && c.done.length) || c.mood || (c.note && c.note.trim())));
+}
 
-// -------------------------------------------------
-// 計算：經驗值、等級、連續天數
-// -------------------------------------------------
-
-// 全部歷史一共完成過幾項
+// ---------------- 計算 ----------------
 function totalDoneCount(s) {
   let n = 0;
   for (const k in s.checkins) n += (s.checkins[k].done || []).length;
   return n;
 }
-
-// 總經驗值 = 所有完成項目 + 每個有打卡的日子加成
+function activeDayCount(s) {
+  let n = 0;
+  for (const k in s.checkins) if (isActive(s.checkins[k])) n++;
+  return n;
+}
 function calcXp(s) {
   let xp = totalDoneCount(s) * XP_PER_TASK;
-  for (const k in s.checkins) {
-    const c = s.checkins[k];
-    const hasActivity = (c.done && c.done.length) || c.mood || (c.note && c.note.trim());
-    if (hasActivity) xp += XP_PER_CHECKIN_DAY;
-  }
+  xp += activeDayCount(s) * XP_PER_DAY;
   return xp;
 }
-
-// 由經驗值換算等級。每一等需要 100 XP。
-// 回傳：目前等級、這一等已累積的 XP、升到下一等需要的 XP
 function calcLevel(xp) {
-  const perLevel = 100;
-  const level = Math.floor(xp / perLevel) + 1;
-  const into = xp % perLevel;
-  return { level, into, need: perLevel };
+  const per = 100;
+  return { level: Math.floor(xp / per) + 1, into: xp % per, need: per };
 }
-
-// 連續打卡天數：從今天往回數，連續有「活動」的天數
+function levelToTitle(level) {
+  const idx = level - 1;
+  if (idx < JINGJIE.length) return JINGJIE[idx];
+  return "飛昇·上"; // 超過十重者
+}
 function calcStreak(s) {
   let streak = 0;
   const d = new Date();
-  // 如果今天還沒有任何活動，從昨天開始算（今天還來得及補）
   while (true) {
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const key = `${d.getFullYear()}-${m}-${day}`;
-    const c = s.checkins[key];
-    const active = c && (((c.done && c.done.length) || c.mood || (c.note && c.note.trim())));
-    if (active) {
+    const key = dateKey(d);
+    if (isActive(s.checkins[key])) {
       streak++;
     } else {
-      // 今天（第一圈）沒活動先跳過，不中斷；其他天沒活動就停
-      if (streak === 0 && key === todayKey()) {
-        d.setDate(d.getDate() - 1);
-        continue;
-      }
+      if (streak === 0 && key === todayKey()) { d.setDate(d.getDate() - 1); continue; }
       break;
     }
     d.setDate(d.getDate() - 1);
   }
   return streak;
 }
-
-// 三個分類是否都至少完成過一項
-function doneAllCategories(s) {
+function doneCatCount(s) {
   const cats = new Set();
-  for (const k in s.checkins) {
+  for (const k in s.checkins)
     for (const gid of (s.checkins[k].done || [])) {
       const g = s.goals.find(x => x.id === gid);
       if (g) cats.add(g.category);
     }
-  }
-  return cats.has("learn") && cats.has("work") && cats.has("fun");
+  return cats.size;
 }
 
-// -------------------------------------------------
-// 操作：新增/刪除目標、打卡、選心情、寫筆記
-// -------------------------------------------------
-
+// ---------------- 操作 ----------------
 function addGoal(category, title) {
-  title = title.trim();
-  if (!title) return;
+  title = title.trim(); if (!title) return;
   state.goals.push({ id: "g" + Date.now(), category, title });
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function deleteGoal(id) {
   state.goals = state.goals.filter(g => g.id !== id);
-  // 也把歷史打卡裡這個目標清掉
-  for (const k in state.checkins) {
+  for (const k in state.checkins)
     state.checkins[k].done = (state.checkins[k].done || []).filter(x => x !== id);
-  }
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function toggleTask(id) {
   const c = todayCheckin();
   const i = c.done.indexOf(id);
-  if (i >= 0) c.done.splice(i, 1);
-  else c.done.push(id);
-  saveState();
-  render();
+  if (i >= 0) c.done.splice(i, 1); else c.done.push(id);
+  saveState(); render();
 }
-
-function setMood(m) {
-  todayCheckin().mood = m;
-  saveState();
-  render();
-}
-
-function setNote(text) {
-  todayCheckin().note = text;
-  saveState();
-  // 筆記是邊打字邊存，不需要每個字都重畫整個畫面
-}
-
+function setMood(m) { todayCheckin().mood = m; saveState(); render(); }
+function setNote(text) { todayCheckin().note = text; saveState(); }
 function resetAll() {
-  if (confirm("確定要把所有目標和打卡紀錄都清空嗎？此動作無法復原。")) {
-    state = emptyState();
-    saveState();
-    render();
+  if (confirm("確定清空所有功課與紀錄？此動作無法復原。")) {
+    state = emptyState(); saveState(); render();
   }
 }
 
-// -------------------------------------------------
-// 畫面：把資料變成看得到的東西
-// -------------------------------------------------
+// ---------------- 主題 ----------------
+const THEME_KEY = "sq-theme";
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+  const btn = document.getElementById("themeToggle");
+  if (btn) btn.textContent = t === "dark" ? "☀ 切換亮色" : "☾ 切換深色";
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", t === "dark" ? "#18181d" : "#f3ece0");
+}
+function toggleTheme() { applyTheme(currentTheme() === "dark" ? "light" : "dark"); }
 
+// ---------------- 分頁 ----------------
+const PAGE_KEY = "sq-page";
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === "page-" + name));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.page === name));
+  try { localStorage.setItem(PAGE_KEY, name); } catch (e) {}
+  window.scrollTo(0, 0);
+  render();
+}
+
+// ================= 畫面 =================
 function render() {
+  renderStatus();
+  renderToday();
+  renderLog();
+  renderStats();
+  renderAchv();
+  renderMe();
+  state.lastLevel = calcLevel(calcXp(state)).level;
+  saveState();
+}
+
+function renderStatus() {
   const xp = calcXp(state);
   const lv = calcLevel(xp);
+  const title = levelToTitle(lv.level);
   const streak = calcStreak(state);
-  const c = todayCheckin();
-
-  // 判斷是不是「剛升等」（這次等級比上次記住的高）
   const justLeveled = lv.level > (state.lastLevel || 1);
 
-  // --- 頂部：等級、經驗條、連續天數 ---
-  const levelNum = document.getElementById("levelNum");
-  levelNum.textContent = lv.level;
-  document.getElementById("streakNum").textContent = streak;
+  document.getElementById("jingjieChar").textContent = title[0];
+  document.getElementById("jingjieName").textContent = title;
+  document.getElementById("jingjieLv").textContent = "· 第 " + lv.level + " 重";
   document.getElementById("xpFill").style.width = (lv.into / lv.need * 100) + "%";
-  document.getElementById("xpText").textContent = `${lv.into} / ${lv.need} XP`;
 
-  // 日期
-  const today = new Date();
-  const week = ["日", "一", "二", "三", "四", "五", "六"][today.getDay()];
-  document.getElementById("dateLabel").textContent =
-    `${today.getMonth() + 1}月${today.getDate()}日（週${week}）`;
+  const nextName = lv.level < JINGJIE.length ? "「" + JINGJIE[lv.level] + "」" : "更高之境";
+  document.getElementById("xpText").textContent =
+    `修為 ${lv.into}/${lv.need}　距${nextName}尚需 ${lv.need - lv.into}`;
 
-  // 升等就閃一下慶祝動畫
+  document.getElementById("streakNum").textContent = streak;
+
   if (justLeveled) {
-    levelNum.parentElement.classList.add("celebrate");
-    setTimeout(() => levelNum.parentElement.classList.remove("celebrate"), 600);
+    const box = document.getElementById("jingjieBox");
+    box.classList.add("celebrate");
+    setTimeout(() => box.classList.remove("celebrate"), 700);
   }
 
-  // --- 心情按鈕 ---
+  // 鶴翁說話
+  const c = todayCheckin();
+  document.getElementById("coachMsg").textContent = getCoachMessage({
+    doneCount: c.done.length, totalCount: state.goals.length,
+    mood: c.mood, streak, justLeveled, newTitle: title,
+  });
+}
+
+function renderToday() {
+  const c = todayCheckin();
+
   const moodRow = document.getElementById("moodRow");
   moodRow.innerHTML = "";
   MOODS.forEach(m => {
@@ -245,45 +217,182 @@ function render() {
     moodRow.appendChild(b);
   });
 
-  // --- 今天的任務清單 ---
-  const todayList = document.getElementById("todayList");
-  todayList.innerHTML = "";
+  const list = document.getElementById("todayList");
+  list.innerHTML = "";
   if (state.goals.length === 0) {
-    todayList.innerHTML = '<li class="empty-hint">還沒設定目標，往下滑去新增吧 👇</li>';
+    list.innerHTML = '<li class="empty-hint">尚未立下功課，往「我的」分頁新增 ✧</li>';
   } else {
     state.goals.forEach(g => {
       const done = c.done.includes(g.id);
       const li = document.createElement("li");
-
       const box = document.createElement("span");
       box.className = "check" + (done ? " done" : "");
       box.textContent = done ? "✓" : "";
       box.onclick = () => toggleTask(g.id);
-
-      const cat = document.createElement("span");
-      cat.className = "task-cat";
-      cat.textContent = CATEGORIES[g.category].icon;
-
       const text = document.createElement("span");
-      text.className = "task-text";
+      text.className = "task-text" + (done ? " done" : "");
       text.textContent = g.title;
-
-      li.appendChild(box);
-      li.appendChild(cat);
-      li.appendChild(text);
-      todayList.appendChild(li);
+      li.appendChild(box); li.appendChild(text);
+      list.appendChild(li);
     });
   }
 
-  // --- 筆記 ---
   document.getElementById("noteInput").value = c.note || "";
+}
 
-  // --- 目標管理（依分類分組） ---
+// ---- 紀錄：月曆 + 時間軸 ----
+function renderLog() {
+  const now = new Date();
+  const y = now.getFullYear(), mo = now.getMonth();
+  document.getElementById("calTitle").textContent = `${y} 年 ${mo + 1} 月`;
+
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = "";
+  const firstDay = new Date(y, mo, 1).getDay();
+  const days = new Date(y, mo + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement("span");
+    blank.className = "cal-cell blank";
+    grid.appendChild(blank);
+  }
+  const tk = todayKey();
+  for (let d = 1; d <= days; d++) {
+    const key = dateKey(new Date(y, mo, d));
+    const c = state.checkins[key];
+    const cnt = c && c.done ? c.done.length : 0;
+    const cell = document.createElement("span");
+    let cls = "cal-cell";
+    if (isActive(c)) cls += " lit lit" + Math.min(cnt, 4);
+    if (key === tk) cls += " today";
+    cell.className = cls;
+    cell.textContent = d;
+    grid.appendChild(cell);
+  }
+
+  const tl = document.getElementById("timeline");
+  const keys = Object.keys(state.checkins).filter(k => isActive(state.checkins[k])).sort().reverse();
+  if (keys.length === 0) {
+    tl.innerHTML = '<p class="empty-hint">還沒有紀錄，從今日開始吧 ✧</p>';
+  } else {
+    tl.innerHTML = "";
+    const wk = ["日", "一", "二", "三", "四", "五", "六"];
+    keys.forEach(k => {
+      const c = state.checkins[k];
+      const dt = new Date(k + "T00:00:00");
+      const item = document.createElement("div");
+      item.className = "tl-item";
+      const dateStr = `${dt.getMonth() + 1}月${dt.getDate()}日 週${wk[dt.getDay()]}`;
+      const note = (c.note && c.note.trim()) ? c.note : "（未留言）";
+      item.innerHTML =
+        `<div class="tl-dot">${c.mood || "·"}</div>` +
+        `<div class="tl-body"><div class="tl-date">${dateStr}` +
+        `<span class="tl-count">${(c.done || []).length} 課</span></div>` +
+        `<div class="tl-note">${escapeHtml(note)}</div></div>`;
+      tl.appendChild(item);
+    });
+  }
+}
+
+// ---- 統計：總覽 + 兩張 SVG 圖 ----
+function lastNDates(n) {
+  const arr = [];
+  const d = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const dd = new Date(d); dd.setDate(d.getDate() - i);
+    arr.push({ key: dateKey(dd), date: dd });
+  }
+  return arr;
+}
+function moodValue(m) { return ({ "😀": 5, "🙂": 4, "😐": 3, "😫": 2, "😴": 1 })[m] || 0; }
+
+function renderStats() {
+  const xp = calcXp(state);
+  const lv = calcLevel(xp);
+  const tiles = [
+    ["目前境界", levelToTitle(lv.level)],
+    ["總修為", xp],
+    ["連續修煉", calcStreak(state) + " 日"],
+    ["修煉天數", activeDayCount(state) + " 日"],
+    ["完成功課", totalDoneCount(state) + " 項"],
+    ["立下功課", state.goals.length + " 項"],
+  ];
+  document.getElementById("statGrid").innerHTML =
+    tiles.map(t => `<div class="stat-tile"><div class="stat-val">${t[1]}</div><div class="stat-key">${t[0]}</div></div>`).join("");
+
+  // 近 14 日完成長條
+  const days = lastNDates(14);
+  const counts = days.map(x => (state.checkins[x.key] && state.checkins[x.key].done ? state.checkins[x.key].done.length : 0));
+  const maxC = Math.max(1, ...counts);
+  const W = 320, H = 120, pad = 6, bw = (W - pad * 2) / days.length;
+  let bars = "";
+  counts.forEach((c, i) => {
+    const h = c === 0 ? 2 : (H - 24) * (c / maxC);
+    const x = pad + i * bw + 2;
+    bars += `<rect x="${x.toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${h.toFixed(1)}" rx="2" class="bar"></rect>`;
+    if (i % 2 === 0) bars += `<text x="${(x + (bw - 4) / 2).toFixed(1)}" y="${H - 5}" class="ax">${days[i].date.getDate()}</text>`;
+  });
+  document.getElementById("chartBars").innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+
+  // 近 14 日心境折線
+  const vals = days.map(x => moodValue(state.checkins[x.key] && state.checkins[x.key].mood));
+  let pts = [], dots = "";
+  vals.forEach((v, i) => {
+    if (v === 0) return;
+    const x = pad + i * bw + bw / 2;
+    const yy = 14 + (H - 36) * (1 - (v - 1) / 4);
+    pts.push(`${x.toFixed(1)},${yy.toFixed(1)}`);
+    dots += `<circle cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="3" class="dot"></circle>`;
+  });
+  const line = pts.length > 1 ? `<polyline points="${pts.join(" ")}" class="line" fill="none"></polyline>` : "";
+  const empty = pts.length === 0 ? `<text x="${W / 2}" y="${H / 2}" class="ax" text-anchor="middle">尚無心境紀錄</text>` : "";
+  document.getElementById("chartMood").innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${line}${dots}${empty}</svg>`;
+}
+
+// ---- 成就 + 境界階梯 ----
+function renderAchv() {
+  const wrap = document.getElementById("achvList");
+  wrap.innerHTML = "";
+  BADGES.forEach(b => {
+    const p = b.prog(state);
+    const unlocked = p.cur >= p.max;
+    const pct = Math.round(p.cur / p.max * 100);
+    const el = document.createElement("div");
+    el.className = "achv" + (unlocked ? " unlocked" : "");
+    el.innerHTML =
+      `<div class="achv-ic"><svg><use href="#${b.icon}"/></svg></div>` +
+      `<div class="achv-body">` +
+        `<div class="achv-top"><span class="achv-name">${b.name}</span>` +
+        `<span class="achv-state">${unlocked ? "已得 ✦" : p.cur + "/" + p.max}</span></div>` +
+        `<div class="achv-cond">${b.cond}</div>` +
+        `<div class="achv-bar"><div class="achv-fill" style="width:${pct}%"></div></div>` +
+      `</div>`;
+    wrap.appendChild(el);
+  });
+
+  const lv = calcLevel(calcXp(state)).level;
+  const ladder = document.getElementById("ladder");
+  ladder.innerHTML = JINGJIE.map((name, i) => {
+    const need = i * 100;
+    const reached = lv >= i + 1;
+    const cur = lv === i + 1;
+    return `<div class="ladder-row${reached ? " reached" : ""}${cur ? " current" : ""}">` +
+      `<span class="ladder-name">${name}</span>` +
+      `<span class="ladder-need">${need} 修為</span>` +
+      `<span class="ladder-mark">${cur ? "現在" : reached ? "✓" : ""}</span></div>`;
+  }).join("");
+}
+
+// ---- 我的：功課管理 ----
+function renderMe() {
   const groups = document.getElementById("goalGroups");
   groups.innerHTML = "";
+  let any = false;
   for (const catKey in CATEGORIES) {
     const list = state.goals.filter(g => g.category === catKey);
     if (list.length === 0) continue;
+    any = true;
     const wrap = document.createElement("div");
     wrap.className = "goal-group";
     wrap.innerHTML = `<h3>${CATEGORIES[catKey].label}</h3>`;
@@ -291,102 +400,49 @@ function render() {
       const row = document.createElement("div");
       row.className = "goal-item";
       const t = document.createElement("span");
-      t.className = "g-text";
-      t.textContent = g.title;
+      t.className = "g-text"; t.textContent = g.title;
       const del = document.createElement("button");
-      del.className = "del-btn";
-      del.textContent = "✕";
+      del.className = "del-btn"; del.textContent = "✕";
       del.onclick = () => deleteGoal(g.id);
-      row.appendChild(t);
-      row.appendChild(del);
+      row.appendChild(t); row.appendChild(del);
       wrap.appendChild(row);
     });
     groups.appendChild(wrap);
   }
-
-  // --- 徽章 ---
-  const badgeGrid = document.getElementById("badgeGrid");
-  badgeGrid.innerHTML = "";
-  BADGES.forEach(b => {
-    const unlocked = b.check(state);
-    const el = document.createElement("div");
-    el.className = "badge" + (unlocked ? " unlocked" : "");
-    el.innerHTML = `<div class="badge-icon">${b.icon}</div><div class="badge-name">${b.name}</div>`;
-    badgeGrid.appendChild(el);
-  });
-
-  // --- AI 夥伴說話 ---
-  const msg = getCoachMessage({
-    doneCount: c.done.length,
-    totalCount: state.goals.length,
-    mood: c.mood,
-    streak: streak,
-    justLeveled: justLeveled,
-    newLevel: lv.level,
-  });
-  document.getElementById("coachMsg").textContent = msg;
-
-  // 記住這次的等級，下次才能判斷有沒有再升等
-  state.lastLevel = lv.level;
-  saveState();
+  if (!any) groups.innerHTML = '<p class="empty-hint">還沒有功課，立一項開始修行吧 ✧</p>';
 }
 
-// -------------------------------------------------
-// 主題：亮色 / 深色切換
-// （資料另外存，跟打卡資料分開）
-// -------------------------------------------------
-
-const THEME_KEY = "sq-theme";
-
-function currentTheme() {
-  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
 
-// 套用主題：改 <html> 的標記、記住選擇、更新按鈕圖示與手機上方列顏色
-function applyTheme(t) {
-  document.documentElement.setAttribute("data-theme", t);
-  try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
-  const btn = document.getElementById("themeToggle");
-  if (btn) btn.textContent = t === "dark" ? "☀" : "☾";
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "dark" ? "#16161a" : "#f6f4ef");
-}
-
-function toggleTheme() {
-  applyTheme(currentTheme() === "dark" ? "light" : "dark");
-}
-
-// -------------------------------------------------
-// 啟動：綁定按鈕、畫第一次
-// -------------------------------------------------
-
+// ---------------- 啟動 ----------------
 let state = loadState();
 
 function init() {
-  // 新增目標
+  // 立功課
   const addBtn = document.getElementById("addGoalBtn");
   const goalInput = document.getElementById("goalInput");
   const goalCat = document.getElementById("goalCategory");
-  const submit = () => {
-    addGoal(goalCat.value, goalInput.value);
-    goalInput.value = "";
-    goalInput.focus();
-  };
+  const submit = () => { addGoal(goalCat.value, goalInput.value); goalInput.value = ""; goalInput.focus(); };
   addBtn.onclick = submit;
   goalInput.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
 
-  // 筆記：邊打邊存
+  // 今日一語：邊打邊存
   document.getElementById("noteInput").addEventListener("input", e => setNote(e.target.value));
 
-  // 重設
+  // 偏好
   document.getElementById("resetBtn").onclick = resetAll;
-
-  // 主題切換鈕：先把圖示設成目前狀態（亮/深色），再綁定點擊
   applyTheme(currentTheme());
   document.getElementById("themeToggle").onclick = toggleTheme;
 
-  render();
+  // 底部導覽
+  document.querySelectorAll(".tab").forEach(t => { t.onclick = () => showPage(t.dataset.page); });
+
+  // 回到上次所在分頁
+  let last = "today";
+  try { const p = localStorage.getItem(PAGE_KEY); if (p) last = p; } catch (e) {}
+  showPage(last);
 }
 
-// 等網頁載入完成再啟動
 document.addEventListener("DOMContentLoaded", init);

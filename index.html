@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <!--
-  暑假大冒險 Summer Quest
-  這是整個 App 的「骨架」。瀏覽器先讀這個檔，
-  再去載入 styles.css（外觀）和 app.js / coach.js（功能）。
+  暑期修煉錄 · Summer Cultivation
+  古風「修煉闖關」版。瀏覽器先讀這個檔（畫面骨架），
+  再載入 styles.css（外觀）與 coach.js / app.js（功能）。
 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <!-- 這行讓網頁在手機上會自動縮放到合適大小 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f4ef" />
-  <title>暑假大冒險</title>
+  <meta name="theme-color" content="#f3ece0" />
+  <title>暑期修煉錄</title>
 
-  <!--
-    防止「閃一下白／黑」：在畫面還沒畫出來前，先決定要用亮色還是深色。
-    優先用使用者上次選的；沒選過就跟著手機系統的設定。
-  -->
+  <!-- 防止「閃一下」：畫面前先決定亮/深色（記住的優先，否則跟系統） -->
   <script>
     (function () {
       try {
@@ -24,17 +20,13 @@
           t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         }
         document.documentElement.setAttribute("data-theme", t);
-      } catch (e) {
-        document.documentElement.setAttribute("data-theme", "light");
-      }
+      } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
     })();
   </script>
 
-  <!-- 讓它能「加到手機主畫面」變成 App 的設定檔 -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.png" />
 
-  <!-- 字體：標題用宋體（思源宋體）、內文用黑體（思源黑體），宋黑搭配最有書卷氣 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet" />
@@ -42,101 +34,190 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <!-- ====== 內嵌 SVG 圖示庫（手繪，取代 emoji，可離線、可隨主題變色） ====== -->
+  <svg style="display:none" aria-hidden="true">
+    <defs>
+      <!-- 仙鶴（丹頂鶴：紅頂呼應朱砂） -->
+      <symbol id="ic-crane" viewBox="0 0 64 64">
+        <path class="s-ink" d="M27 43l-3 15M31 43l1 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path class="s-ink" d="M16 39q3-12 16-12q11 0 14 9q-6 7-17 7q-9 0-13-4z" fill="currentColor"/>
+        <path class="s-ink" d="M44 36l13-4l-9 8z" fill="currentColor"/>
+        <path class="s-ink" d="M22 30q-3-13 6-19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <path class="s-ink" d="M27 11l8-2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        <circle class="s-seal" cx="26" cy="11" r="3" fill="currentColor"/>
+      </symbol>
+      <!-- 導覽列 -->
+      <symbol id="ic-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></g></symbol>
+      <symbol id="ic-log" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="ic-stats" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-6"/></g></symbol>
+      <symbol id="ic-achv" viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 13v4M9 20h6M5 5h2M17 5h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="ic-me" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <!-- 成就 -->
+      <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13C12 9 9 8 5 8c0 4 3 5 7 5z" fill="currentColor"/><path d="M12 11c0-3 3-4 6-4 0 3-3 4-6 4z" fill="currentColor" opacity=".75"/></symbol>
+      <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 .3 1 1 1.6 2 1.6C12 9 11 6 12 3z" fill="currentColor"/></symbol>
+      <symbol id="ic-bolt" viewBox="0 0 24 24"><path d="M13 2L5 13h5l-1 9 8-12h-5z" fill="currentColor"/></symbol>
+      <symbol id="ic-medal" viewBox="0 0 24 24"><circle cx="12" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11.5l1.2 2.4 2.6.3-1.9 1.8.5 2.6L12 17.2 9.5 18.4l.5-2.6-1.9-1.8 2.6-.3z" fill="currentColor"/><path d="M9 3h6l-1.5 5h-3z" fill="currentColor" opacity=".7"/></symbol>
+      <symbol id="ic-pill" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/><circle cx="10.4" cy="10.4" r="1" fill="#fff" opacity=".8"/></symbol>
+      <symbol id="ic-trigram" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></g></symbol>
+    </defs>
+  </svg>
+
+  <!-- 裝飾背景層（遠山雲霧，極淡，純氛圍） -->
+  <div class="scenery" aria-hidden="true">
+    <svg class="mist" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 90 Q60 70 120 86 T240 84 T400 80 V120 H0 Z"/></svg>
+    <svg class="mountains" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 120 L70 50 L120 90 L180 35 L250 95 L320 55 L400 100 V120 Z"/></svg>
+    <span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span><span class="spark s4"></span>
+  </div>
+
   <div id="app">
 
-    <!-- ===== 頂部：等級、經驗值、連續天數 ===== -->
-    <header class="topbar">
-      <!-- 亮色／深色切換鈕（放在自己的一列，靠右） -->
-      <div class="topbar-top">
-        <button id="themeToggle" class="theme-toggle" aria-label="切換亮色或深色">☾</button>
-      </div>
-
-      <div class="topbar-row">
-        <div class="level-badge" title="等級">
-          <span class="level-num" id="levelNum">1</span>
-          <span class="level-label">等級</span>
+    <!-- ====== 頂部狀態列：境界 + 修為 + 連續修煉（各頁共用） ====== -->
+    <header class="statusbar">
+      <div class="brand">暑期修煉錄</div>
+      <div class="status-row">
+        <div class="jingjie" id="jingjieBox" title="境界">
+          <span class="jingjie-char" id="jingjieChar">練</span>
         </div>
-        <div class="title-block">
-          <h1>暑假大冒險</h1>
-          <p id="dateLabel">—</p>
+        <div class="status-mid">
+          <div class="jingjie-name"><span id="jingjieName">練氣</span><span class="jingjie-lv" id="jingjieLv">· 第一重</span></div>
+          <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+          <div class="xp-text" id="xpText">修為 0 / 100</div>
         </div>
-        <div class="streak" id="streakBox" title="連續打卡天數">
-          <span class="streak-fire">🔥</span>
+        <div class="streak" id="streakBox" title="連續修煉">
+          <svg class="streak-ic"><use href="#ic-flame"/></svg>
           <span class="streak-num" id="streakNum">0</span>
+          <span class="streak-cap">連續</span>
         </div>
-      </div>
-
-      <!-- 經驗值進度條 -->
-      <div class="xp-row">
-        <span class="xp-label">經驗值</span>
-        <span class="xp-text" id="xpText">0 / 100</span>
-      </div>
-      <div class="xp-bar">
-        <div class="xp-fill" id="xpFill"></div>
       </div>
     </header>
 
-    <!-- ===== AI 夥伴 ===== -->
-    <section class="card coach-card">
-      <div class="coach-avatar" id="coachAvatar">🦊</div>
-      <div class="coach-bubble">
-        <p class="coach-name">夥伴 阿橘</p>
-        <p class="coach-msg" id="coachMsg">嗨！今天想完成哪些事呢？</p>
-      </div>
-    </section>
+    <main class="pages">
 
-    <!-- ===== 今天 ===== -->
-    <section class="card">
-      <h2>今天的我</h2>
+      <!-- ========== 今日 ========== -->
+      <section class="page active" id="page-today">
+        <div class="card scroll coach-card">
+          <div class="coach-avatar"><svg class="crane"><use href="#ic-crane"/></svg></div>
+          <div class="coach-bubble">
+            <p class="coach-name">鶴翁</p>
+            <p class="coach-msg" id="coachMsg">道友今日來了，且看今日修些什麼？</p>
+          </div>
+        </div>
 
-      <!-- 心情選擇 -->
-      <p class="sub">今天心情如何？</p>
-      <div class="mood-row" id="moodRow"></div>
+        <div class="card">
+          <h2>今日心境</h2>
+          <div class="mood-row" id="moodRow"></div>
+        </div>
 
-      <!-- 今日任務勾選清單（從下面設定的目標自動帶入） -->
-      <p class="sub">今天完成了哪些？打勾就得經驗值！</p>
-      <ul class="checklist" id="todayList">
-        <li class="empty-hint">還沒設定目標，往下滑去新增吧 👇</li>
-      </ul>
+        <div class="card">
+          <h2>今日功課</h2>
+          <p class="sub">完成一項即增修為，往「我的」可新增功課</p>
+          <ul class="checklist" id="todayList">
+            <li class="empty-hint">尚未立下功課，往「我的」分頁新增 ✧</li>
+          </ul>
+        </div>
 
-      <!-- 今天的小筆記 -->
-      <p class="sub">給今天留一句話</p>
-      <input type="text" id="noteInput" class="note-input"
-             placeholder="例如：今天讀了 30 分鐘日文，蠻有成就感的" />
-    </section>
+        <div class="card">
+          <h2>今日一語</h2>
+          <input type="text" id="noteInput" class="note-input" placeholder="例：今日讀經一刻鐘，心稍定" />
+        </div>
+      </section>
 
-    <!-- ===== 暑假目標設定 ===== -->
-    <section class="card">
-      <h2>我的暑假目標</h2>
-      <p class="sub">分三類，想到就加進來！</p>
+      <!-- ========== 紀錄 ========== -->
+      <section class="page" id="page-log">
+        <div class="card">
+          <h2>修煉月曆</h2>
+          <p class="sub" id="calTitle">—</p>
+          <div class="cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div class="cal-grid" id="calGrid"></div>
+          <p class="cal-legend">顏色越深 ＝ 當日完成越多</p>
+        </div>
+        <div class="card">
+          <h2>過往足跡</h2>
+          <div class="timeline" id="timeline">
+            <p class="empty-hint">還沒有紀錄，從今日開始吧 ✧</p>
+          </div>
+        </div>
+      </section>
 
-      <div class="add-goal">
-        <select id="goalCategory">
-          <option value="learn">📚 想學的</option>
-          <option value="work">💪 想認真做的</option>
-          <option value="fun">🎮 想玩的</option>
-        </select>
-        <input type="text" id="goalInput" placeholder="輸入一個目標…" />
-        <button id="addGoalBtn" class="primary-btn">＋</button>
-      </div>
+      <!-- ========== 統計 ========== -->
+      <section class="page" id="page-stats">
+        <div class="card">
+          <h2>修行總覽</h2>
+          <div class="stat-grid" id="statGrid"></div>
+        </div>
+        <div class="card">
+          <h2>近十四日功課</h2>
+          <div class="chart" id="chartBars"></div>
+        </div>
+        <div class="card">
+          <h2>近十四日心境</h2>
+          <div class="chart" id="chartMood"></div>
+        </div>
+      </section>
 
-      <div id="goalGroups"></div>
-    </section>
+      <!-- ========== 成就（道行） ========== -->
+      <section class="page" id="page-achv">
+        <div class="card">
+          <h2>道行成就</h2>
+          <p class="sub">達成條件即點亮，下方有進度</p>
+          <div class="achv-list" id="achvList"></div>
+        </div>
+        <div class="card">
+          <h2>境界階梯</h2>
+          <p class="sub">每滿百修為，晉升一重境界</p>
+          <div class="ladder" id="ladder"></div>
+        </div>
+      </section>
 
-    <!-- ===== 成就徽章 ===== -->
-    <section class="card">
-      <h2>成就徽章</h2>
-      <p class="sub">達成條件就會點亮 ✨</p>
-      <div class="badge-grid" id="badgeGrid"></div>
-    </section>
+      <!-- ========== 我的 ========== -->
+      <section class="page" id="page-me">
+        <div class="card">
+          <h2>立定功課</h2>
+          <p class="sub">分三類：問道（學）、勤修（做）、遊歷（玩）</p>
+          <div class="add-goal">
+            <select id="goalCategory">
+              <option value="learn">問道</option>
+              <option value="work">勤修</option>
+              <option value="fun">遊歷</option>
+            </select>
+            <input type="text" id="goalInput" placeholder="立一項功課…" />
+            <button id="addGoalBtn" class="primary-btn">＋</button>
+          </div>
+          <div id="goalGroups"></div>
+        </div>
 
-    <footer class="footer">
-      <p>你的資料只存在這支手機上 🔒 · 由你親手打造</p>
-      <button id="resetBtn" class="link-btn">重設全部資料</button>
-    </footer>
+        <div class="card">
+          <h2>偏好設定</h2>
+          <div class="setting-row">
+            <span>畫面主題</span>
+            <button id="themeToggle" class="pill-btn">☾ 切換深色</button>
+          </div>
+          <div class="setting-row">
+            <span>清空所有資料</span>
+            <button id="resetBtn" class="pill-btn danger">重設</button>
+          </div>
+        </div>
+
+        <div class="card about">
+          <h2>關於</h2>
+          <p>暑期修煉錄 —— 把暑假化作一段修行：立功課、每日精進、累積修為、晉升境界。</p>
+          <p class="dim">資料只存在你這支手機（localStorage），不上傳。由你親手打造。</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ====== 底部導覽 ====== -->
+    <nav class="tabbar" id="tabbar">
+      <button class="tab active" data-page="today"><svg><use href="#ic-today"/></svg><span>今日</span></button>
+      <button class="tab" data-page="log"><svg><use href="#ic-log"/></svg><span>紀錄</span></button>
+      <button class="tab" data-page="stats"><svg><use href="#ic-stats"/></svg><span>統計</span></button>
+      <button class="tab" data-page="achv"><svg><use href="#ic-achv"/></svg><span>成就</span></button>
+      <button class="tab" data-page="me"><svg><use href="#ic-me"/></svg><span>我的</span></button>
+    </nav>
   </div>
 
-  <!-- 載入功能程式碼。coach.js 要先載，app.js 才用得到它 -->
   <script src="coach.js"></script>
   <script src="app.js"></script>
 </body>
