@@ -9,12 +9,35 @@
   <meta charset="UTF-8" />
   <!-- 這行讓網頁在手機上會自動縮放到合適大小 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#6d5dfc" />
-  <title>暑假大冒險 ☀️</title>
+  <meta name="theme-color" content="#f6f4ef" />
+  <title>暑假大冒險</title>
+
+  <!--
+    防止「閃一下白／黑」：在畫面還沒畫出來前，先決定要用亮色還是深色。
+    優先用使用者上次選的；沒選過就跟著手機系統的設定。
+  -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("sq-theme");
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
 
   <!-- 讓它能「加到手機主畫面」變成 App 的設定檔 -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.png" />
+
+  <!-- 字體：標題用宋體（思源宋體）、內文用黑體（思源黑體），宋黑搭配最有書卷氣 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -23,8 +46,13 @@
 
     <!-- ===== 頂部：等級、經驗值、連續天數 ===== -->
     <header class="topbar">
+      <!-- 亮色／深色切換鈕（放在自己的一列，靠右） -->
+      <div class="topbar-top">
+        <button id="themeToggle" class="theme-toggle" aria-label="切換亮色或深色">☾</button>
+      </div>
+
       <div class="topbar-row">
-        <div class="level-badge">
+        <div class="level-badge" title="等級">
           <span class="level-num" id="levelNum">1</span>
           <span class="level-label">等級</span>
         </div>
@@ -39,9 +67,12 @@
       </div>
 
       <!-- 經驗值進度條 -->
+      <div class="xp-row">
+        <span class="xp-label">經驗值</span>
+        <span class="xp-text" id="xpText">0 / 100</span>
+      </div>
       <div class="xp-bar">
         <div class="xp-fill" id="xpFill"></div>
-        <span class="xp-text" id="xpText">0 / 100 XP</span>
       </div>
     </header>
 

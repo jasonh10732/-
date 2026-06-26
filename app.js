@@ -332,6 +332,31 @@ function render() {
 }
 
 // -------------------------------------------------
+// 主題：亮色 / 深色切換
+// （資料另外存，跟打卡資料分開）
+// -------------------------------------------------
+
+const THEME_KEY = "sq-theme";
+
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
+// 套用主題：改 <html> 的標記、記住選擇、更新按鈕圖示與手機上方列顏色
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+  const btn = document.getElementById("themeToggle");
+  if (btn) btn.textContent = t === "dark" ? "☀" : "☾";
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", t === "dark" ? "#16161a" : "#f6f4ef");
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme() === "dark" ? "light" : "dark");
+}
+
+// -------------------------------------------------
 // 啟動：綁定按鈕、畫第一次
 // -------------------------------------------------
 
@@ -355,6 +380,10 @@ function init() {
 
   // 重設
   document.getElementById("resetBtn").onclick = resetAll;
+
+  // 主題切換鈕：先把圖示設成目前狀態（亮/深色），再綁定點擊
+  applyTheme(currentTheme());
+  document.getElementById("themeToggle").onclick = toggleTheme;
 
   render();
 }
