@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  暑假大冒險 Summer Quest
+  這是整個 App 的「骨架」。瀏覽器先讀這個檔，
+  再去載入 styles.css（外觀）和 app.js / coach.js（功能）。
+-->
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <!-- 這行讓網頁在手機上會自動縮放到合適大小 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>暑假大冒險 ☀️</title>
+
+  <!-- 讓它能「加到手機主畫面」變成 App 的設定檔 -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== 頂部：等級、經驗值、連續天數 ===== -->
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="level-badge">
+          <span class="level-num" id="levelNum">1</span>
+          <span class="level-label">等級</span>
+        </div>
+        <div class="title-block">
+          <h1>暑假大冒險</h1>
+          <p id="dateLabel">—</p>
+        </div>
+        <div class="streak" id="streakBox" title="連續打卡天數">
+          <span class="streak-fire">🔥</span>
+          <span class="streak-num" id="streakNum">0</span>
+        </div>
+      </div>
+
+      <!-- 經驗值進度條 -->
+      <div class="xp-bar">
+        <div class="xp-fill" id="xpFill"></div>
+        <span class="xp-text" id="xpText">0 / 100 XP</span>
+      </div>
+    </header>
+
+    <!-- ===== AI 夥伴 ===== -->
+    <section class="card coach-card">
+      <div class="coach-avatar" id="coachAvatar">🦊</div>
+      <div class="coach-bubble">
+        <p class="coach-name">夥伴 阿橘</p>
+        <p class="coach-msg" id="coachMsg">嗨！今天想完成哪些事呢？</p>
+      </div>
+    </section>
+
+    <!-- ===== 今天 ===== -->
+    <section class="card">
+      <h2>今天的我</h2>
+
+      <!-- 心情選擇 -->
+      <p class="sub">今天心情如何？</p>
+      <div class="mood-row" id="moodRow"></div>
+
+      <!-- 今日任務勾選清單（從下面設定的目標自動帶入） -->
+      <p class="sub">今天完成了哪些？打勾就得經驗值！</p>
+      <ul class="checklist" id="todayList">
+        <li class="empty-hint">還沒設定目標，往下滑去新增吧 👇</li>
+      </ul>
+
+      <!-- 今天的小筆記 -->
+      <p class="sub">給今天留一句話</p>
+      <input type="text" id="noteInput" class="note-input"
+             placeholder="例如：今天讀了 30 分鐘日文，蠻有成就感的" />
+    </section>
+
+    <!-- ===== 暑假目標設定 ===== -->
+    <section class="card">
+      <h2>我的暑假目標</h2>
+      <p class="sub">分三類，想到就加進來！</p>
+
+      <div class="add-goal">
+        <select id="goalCategory">
+          <option value="learn">📚 想學的</option>
+          <option value="work">💪 想認真做的</option>
+          <option value="fun">🎮 想玩的</option>
+        </select>
+        <input type="text" id="goalInput" placeholder="輸入一個目標…" />
+        <button id="addGoalBtn" class="primary-btn">＋</button>
+      </div>
+
+      <div id="goalGroups"></div>
+    </section>
+
+    <!-- ===== 成就徽章 ===== -->
+    <section class="card">
+      <h2>成就徽章</h2>
+      <p class="sub">達成條件就會點亮 ✨</p>
+      <div class="badge-grid" id="badgeGrid"></div>
+    </section>
+
+    <footer class="footer">
+      <p>你的資料只存在這支手機上 🔒 · 由你親手打造</p>
+      <button id="resetBtn" class="link-btn">重設全部資料</button>
+    </footer>
+  </div>
+
+  <!-- 載入功能程式碼。coach.js 要先載，app.js 才用得到它 -->
+  <script src="coach.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "暑假大冒險",
+  "short_name": "暑假大冒險",
+  "description": "把暑假目標變成每日打卡的闖關遊戲，還有 AI 夥伴幫你打氣。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f1ff",
+  "theme_color": "#6d5dfc",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
